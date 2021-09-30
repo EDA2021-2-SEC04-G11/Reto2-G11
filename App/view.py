@@ -37,7 +37,20 @@ operación solicitada
 def printMenu():
     print("Bienvenido")
     print("1- Cargar información en el catálogo")
-    print("2- ")
+    print("2- Las n obras mas antiguas para un medio especifico")
+
+def initcatalog():
+    return controller.initcatalog()
+
+def loaddata(catalog):
+    controller.loaddata(catalog)
+
+def getartworksbymedium(catalog,m):
+    return controller.getartworksbymedium(catalog,m)
+
+def printartworksbymedium(artworksbymedium):
+    for i in lt.iterator(artworksbymedium):
+        print(f"TITLE: {i['Title']}  |  OBJECTID: {i['ObjectID']} ")
 
 catalog = None
 
@@ -49,9 +62,15 @@ while True:
     inputs = input('Seleccione una opción para continuar\n')
     if int(inputs[0]) == 1:
         print("Cargando información de los archivos ....")
+        catalog = initcatalog()
+        loaddata(catalog)
 
     elif int(inputs[0]) == 2:
-        pass
+        m = input('Medio:\n')
+        n = input('Valor de n:\n')
+        n = int(n.strip())
+        artworksbymedium = getartworksbymedium(catalog,m)
+
 
     else:
         sys.exit(0)
