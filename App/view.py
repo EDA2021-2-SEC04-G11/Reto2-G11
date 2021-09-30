@@ -51,7 +51,7 @@ def getartworksbymedium(catalog,m):
 def printartworksbymedium(artworksbymedium):
     print(artworksbymedium)
     for i in lt.iterator(artworksbymedium):
-        print(f"TITLE: {i['Title']}  |  OBJECTID: {i['ObjectID']} ")
+        print(f"TITLE: {i['Title']}  |  OBJECTID: {i['ObjectID']}  |  MEDIUM: {i['Medium']}")
 
 catalog = None
 
