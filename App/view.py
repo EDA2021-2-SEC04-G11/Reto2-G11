@@ -49,6 +49,7 @@ def getartworksbymedium(catalog,m):
     return controller.getartworksbymedium(catalog,m)
 
 def printartworksbymedium(artworksbymedium):
+    print(artworksbymedium)
     for i in lt.iterator(artworksbymedium):
         print(f"TITLE: {i['Title']}  |  OBJECTID: {i['ObjectID']} ")
 
@@ -70,6 +71,7 @@ while True:
         n = input('Valor de n:\n')
         n = int(n.strip())
         artworksbymedium = getartworksbymedium(catalog,m)
+        printartworksbymedium(artworksbymedium)
 
 
     else:
