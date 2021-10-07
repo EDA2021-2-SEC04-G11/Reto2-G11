@@ -53,8 +53,8 @@ def initcatalog():
     }
     catalog['artists'] = lt.newList(datastructure,compareartistid)
     catalog['artworks'] = lt.newList(datastructure,compareartistid)
-    catalog['mediums'] = mp.newMap(21251,comparefunction=comparemedium,maptype='PROBING')
-    catalog['objectids'] = mp.newMap(150681,comparefunction=comparemedium)
+    catalog['mediums'] = mp.newMap(769,comparefunction=comparemedium,maptype='PROBING')
+    catalog['objectids'] = mp.newMap(769,comparefunction=comparemedium)
     return catalog
 
 # Funciones para agregar informacion al catalogo

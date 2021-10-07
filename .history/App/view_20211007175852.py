@@ -24,7 +24,6 @@ import config as cf
 import sys
 import controller
 from DISClib.ADT import list as lt
-from DISClib.ADT import map as mp
 assert cf
 
 
@@ -51,6 +50,7 @@ def getartworksbymedium(catalog,m):
 
 def printartworksbymedium(artworksbymedium):
     # Lithograph
+    print(artworksbymedium)
     for i in lt.iterator(artworksbymedium):
         print(f"TITLE: {i['Title']}  |  OBJECTID: {i['ObjectID']}  |  MEDIUM: {i['Medium']}")
 

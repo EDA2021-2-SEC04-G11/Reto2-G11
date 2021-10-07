@@ -51,8 +51,9 @@ def getartworksbymedium(catalog,m):
 
 def printartworksbymedium(artworksbymedium):
     # Lithograph
-    for i in lt.iterator(artworksbymedium):
-        print(f"TITLE: {i['Title']}  |  OBJECTID: {i['ObjectID']}  |  MEDIUM: {i['Medium']}")
+    print(mp.size(catalog['mediums']))
+    #for i in lt.iterator(artworksbymedium):
+        #print(f"TITLE: {i['Title']}  |  OBJECTID: {i['ObjectID']}  |  MEDIUM: {i['Medium']}")
 
 catalog = None
 
