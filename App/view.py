@@ -78,3 +78,28 @@ while True:
     else:
         sys.exit(0)
 sys.exit(0)
+
+"""
+REQ 1: 
+    Find artists born in a specific range of years
+        PRINT:  Total artists born in range  
+                |  for the initial 3 and last 3 -> (DisplayName, BeginDate, EndDate, Nationality, Gender)
+REQ 2: 
+    Find artworks adquired in a specific range of date
+        PRINT:  Total artworks adquired in range  |  Total artworks such that ("pucharse" in artwork["CreditLine"])  
+                |  for the 3 artists with the most artworks and 3 artists with the least artworks -> (Title, Artists transformed from ConstituentID's,
+                DateAcquired, Medium, Dimensions)
+REQ 3: 
+    Artworks classification of an artists by medium
+        PRINT:  Total artist's artworks  |  Total mediums used  |  Most used technique  
+                |  for the initial 3 and last 3 -> (Title, DateAcquired, Medium, Dimensions)
+REQ 5: 
+    Transport artworks of a department
+        PRINT: Total artworks to transport  |  Stimated price of service  |  Stimated weigh of service  
+                |  for the most ancient 5 and most expensive 5 -> (Title, Artists transformed from ConstituentID's, Classification, DateAcquired, Medium, Dimensions,
+                Cost of transportation)
+REQ 6: 
+    Find the best n (input) prolific artists in the classification in a range of years
+        PRINT:  For each artist -> (Total artworks, Total mediums used, Most used Medium,
+                For the first 5 artworks of that artist with the most used Medium -> (Title, DateAcquired, Medium, Dimensions))
+"""

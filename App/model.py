@@ -37,24 +37,30 @@ from DISClib.Algorithms.Sorting import quicksort as quick
 from DISClib.Algorithms.Sorting import shellsort as shell
 assert cf
 
-"""
-Se define la estructura de un catálogo de videos. El catálogo tendrá dos listas, una para los videos, otra para las categorias de
-los mismos.
-"""
-
 # Construccion de modelos
 
 def initcatalog():
-    datastructure = 'ARRAY_LIST'
+    # Number of artists in large file: 15224
+    # Number of artworks in large file: 150681
+    # Number of mediums in large file: 21251
     catalog = {
-        'artists':None,
         'artworks':None,
-        'mediums':None
+        'mediums':None,
+        'artists with artworks':None
     }
-    catalog['artists'] = lt.newList(datastructure,compareartistid)
-    catalog['artworks'] = lt.newList(datastructure,compareartistid)
-    catalog['mediums'] = mp.newMap(21251,comparefunction=comparemedium,maptype='PROBING')
-    catalog['objectids'] = mp.newMap(150681,comparefunction=comparemedium)
+    catalog['artworks'] = mp.newMap(150681,maptype='PROBING',loadfactor=0.5,comparefunction=comparedateadquisition)  
+    catalog['mediums'] = mp.newMap(21251,comparefunction=comparemedium,maptype='PROBING',loadfactor=0.5)
+    catalog['artists with artworks'] = mp.newMap(15224,maptype='PROBING',loadfactor=0.5,comparefunction=compareartistid)  
+    """
+    METHOD 1  -----  Currently using  -----  
+    catalog['artists list'] : TAD LIST SORTED BY BeginDate( DisplayName, BeginDate, ArtworkNumber, MediumNumber  )     |||||    REQ 6,3,1
+    catalog['artists map'] : TAD MAP( DisplayName -> Gender, BeginDate, ArtworkNumber, MediumNumber, EndDate, Nationality, TopMedium
+                                                     , TopMedium artworks : TAD LIST SORTED BY DateAcquired(ObjectID, DateAcquired) )     |||||    REQ 6,3,1
+    catalog['artworks list'] : TAD LIST SORTED BY Date( ObjectID, Date, Depth (cm), Diameter (cm), Height (cm), Length (cm), Width (cm), Weight (kg) )     |||||    REQ 5
+    catalog['artworks list for req 2'] : TAD LIST SORTED BY DateAcquired( ObjectID, DateAcquired )     |||||    REQ 2
+    catalog['artworks map'] : TAD MAP( ObjectID -> Title, ArtistsFromIDs, Classification, Medium, Dimensions )     |||||    REQ 5,2
+    catalog['artists with ids'] : TAD MAP( ConstituentID : DisplayName )     |||||    REQ 5,2
+    """
     return catalog
 
 # Funciones para agregar informacion al catalogo
@@ -214,3 +220,30 @@ def shellsorting(lst, target):
     stop_time = time.process_time()
     elapsed_time_mseg = (stop_time - start_time)*1000
     return (ordenada, f'time: {elapsed_time_mseg}')
+
+
+
+"""
+REQ 1: 
+    Find artists born in a specific range of years
+        PRINT:  Total artists born in range  
+                |  for the initial 3 and last 3 -> (DisplayName, BeginDate, EndDate, Nationality, Gender)
+REQ 2: 
+    Find artworks adquired in a specific range of date
+        PRINT:  Total artworks adquired in range  |  Total artworks such that ("pucharse" in artwork["CreditLine"])  
+                |  for the 3 artists with the most artworks and 3 artists with the least artworks -> (Title, Artists transformed from ConstituentID's,
+                DateAcquired, Medium, Dimensions)
+REQ 3: 
+    Artworks classification of an artists by medium
+        PRINT:  Total artist's artworks  |  Total mediums used  |  Most used technique  
+                |  for the initial 3 and last 3 -> (Title, DateAcquired, Medium, Dimensions)
+REQ 5: 
+    Transport artworks of a department
+        PRINT: Total artworks to transport  |  Stimated price of service  |  Stimated weigh of service  
+                |  for the most ancient 5 and most expensive 5 -> (Title, Artists transformed from ConstituentID's, Classification, DateAcquired, Medium, Dimensions,
+                Cost of transportation)
+REQ 6: 
+    Find the best n (input) prolific artists in the classification in a range of years
+        PRINT:  For each artist -> (Total artworks, Total mediums used, Most used Medium,
+                For the first 5 artworks of that artist with the most used Medium -> (Title, DateAcquired, Medium, Dimensions)
+"""
