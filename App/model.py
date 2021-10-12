@@ -25,7 +25,9 @@
  """
 
 import datetime
+import sys
 import time
+from DISClib.DataStructures.chaininghashtable import get
 import config as cf
 from DISClib.ADT import list as lt
 from DISClib.ADT import map as mp
@@ -43,207 +45,359 @@ def initcatalog():
     # Number of artists in large file: 15224
     # Number of artworks in large file: 150681
     # Number of mediums in large file: 21251
+    # Number of max mediums for an artist in large file: 352, id: 41829
     catalog = {
-        'artworks':None,
-        'mediums':None,
-        'artists with artworks':None
+        'artists list':None,
+        'artists map':None,
+        'artworks list':None,
+        'artworks list 2':None,
+        'artworks map':None,
+        'artists with ids':None,
+        'ids with artists':None,
     }
-    catalog['artworks'] = mp.newMap(150681,maptype='PROBING',loadfactor=0.5,comparefunction=comparedateadquisition)  
-    catalog['mediums'] = mp.newMap(21251,comparefunction=comparemedium,maptype='PROBING',loadfactor=0.5)
-    catalog['artists with artworks'] = mp.newMap(15224,maptype='PROBING',loadfactor=0.5,comparefunction=compareartistid)  
+    catalog['artists list'] = lt.newList(datastructure='ARRAY_LIST')
+    catalog['artists map'] = mp.newMap(15224,maptype='PROBING',loadfactor=0.5)
+    catalog['artworks list'] = lt.newList(datastructure='ARRAY_LIST')
+    catalog['artworks list 2'] = lt.newList(datastructure='ARRAY_LIST')
+    catalog['artworks map'] = mp.newMap(150681,maptype='PROBING',loadfactor=0.5)  
+    catalog['artists with ids'] = mp.newMap(15224,maptype='PROBING',loadfactor=0.5) 
+    catalog['ids with artists'] = mp.newMap(15224,maptype='PROBING',loadfactor=0.5)  
     """
     METHOD 1  -----  Currently using  -----  
-    catalog['artists list'] : TAD LIST SORTED BY BeginDate( DisplayName, BeginDate, ArtworkNumber, MediumNumber  )     |||||    REQ 6,3,1
-    catalog['artists map'] : TAD MAP( DisplayName -> Gender, BeginDate, ArtworkNumber, MediumNumber, EndDate, Nationality, TopMedium
+    catalog['artists list'] : TAD LIST SORTED BY BeginDate( ConstituentID, DisplayName, BeginDate, ArtworkNumber, MediumNumber  )     |||||    REQ 6,3,1  
+    catalog['artists map'] : TAD MAP( ConstituentID -> DisplayName, Gender, BeginDate, ArtworkNumber, MediumNumber, EndDate, Nationality, Mediums : TAD MAP(), TopMedium
                                                      , TopMedium artworks : TAD LIST SORTED BY DateAcquired(ObjectID, DateAcquired) )     |||||    REQ 6,3,1
-    catalog['artworks list'] : TAD LIST SORTED BY Date( ObjectID, Date, Depth (cm), Diameter (cm), Height (cm), Length (cm), Width (cm), Weight (kg) )     |||||    REQ 5
-    catalog['artworks list for req 2'] : TAD LIST SORTED BY DateAcquired( ObjectID, DateAcquired )     |||||    REQ 2
-    catalog['artworks map'] : TAD MAP( ObjectID -> Title, ArtistsFromIDs, Classification, Medium, Dimensions )     |||||    REQ 5,2
+    catalog['artworks list'] : TAD LIST SORTED BY Date( ObjectID, Date, Title, Artists : TAD LIST(DisplayName), Classification, Medium,
+                                                 Dimensions, Depth (cm), Diameter (cm), Height (cm), Length (cm), Width (cm), Weight (kg) )     |||||    REQ 5
+    catalog['artworks list 2'] : TAD LIST SORTED BY DateAcquired( ObjectID, ConstituentID, DateAcquired, CreditLine, Title, Artists : TAD LIST(DisplayName),
+                                                                 Classification, Medium, Dimensions, Date )     |||||    REQ 2
+    catalog['artworks map'] : TAD MAP(ObjectID --> ConstituentID, DateAcquired, CreditLine, Title, Artists : TAD LIST(DisplayName),
+                                                                 Classification, Medium, Dimensions, Date)
     catalog['artists with ids'] : TAD MAP( ConstituentID : DisplayName )     |||||    REQ 5,2
+    catalog['ids with artists'] : TAD MAP( DisplayName : ConstituentID )     |||||    REQ 5
     """
     return catalog
 
 # Funciones para agregar informacion al catalogo
 
-def addartist(catalog,artist):
-    new = newartist()
-    infoartist(new,artist)
-    lt.addLast(catalog['artists'],new)
+def sortData(catalog):
+    # Sort catalog['artists list'] by BeginDate (YYYY)
+    cmp = cmpBeginDate
+    lst = catalog['artists list']
+    quicksorting(lst,cmp)
+    # Sort the key   'TopMedium artworks'  : catalog['artists map'] ---> key = 'TopMedium artworks' ; by DateAcquired (MM-DD-YYYY) for each artist
+    cmp = cmpDateAcquired
+    for i in lt.iterator(catalog['artists list']):
+        key = i['ConstituentID']
+        person = me.getValue(mp.get(catalog['artists map'],key))
+        lst = person['TopMedium artworks']
+        quicksorting(lst,cmp)
+    # Sort catalog['artworks list'] by Date
+    cmp = cmpDate
+    lst = catalog['artworks list']
+    quicksorting(lst,cmp) 
+    # Sort catalog['artworks list 2'] by DateAcquired
+    cmp = cmpDateAcquired
+    lst = catalog['artworks list 2']
+    quicksorting(lst,cmp) 
+    # END
 
-def addartwork(catalog,artwork):
-    new = newartwork()
-    infoartwork(new,artwork)
-    lt.addLast(catalog['artworks'],new)
-    ispresent = mp.contains(catalog['mediums'],artwork['Medium'])
-    if not ispresent:
-        addmedium(catalog,artwork)
-    addartworkmedium(catalog,artwork)
+def addArtwork(catalog,artwork):
+    # Create artwork model that will be added to the catalog
+    new1 = infoartwork_list1(artwork)
+    new2 = infoartwork_list2(artwork)
+    # Add artists of artwork to the artwork models created
+    artid = artwork['ConstituentID'].strip('[]').replace(' ','').split(',')
+    names = lt.newList(datastructure='ARRAY_LIST')
+    for i in artid:
+        addArtistMedium(catalog,i,artwork)
+        addArtworkArtists(catalog,names,i)
+    new1['Artists'] = names
+    new2['Artists'] = names
+    # Artworks Lists
+    lt.addLast(catalog['artworks list'],new1)
+    lt.addLast(catalog['artworks list 2'],new2)
+    # Artworks map
+    mp.put(catalog['artworks map'],artwork['ObjectID'],new2)
+    # END
 
-def addmedium(catalog, artwork):
-    newtag = newmedium(artwork['Medium'])
-    mp.put(catalog['mediums'], artwork['Medium'], newtag)
+def addArtist(catalog,artist):
+    # artists list
+    new = infoartist_list(artist)
+    lt.addLast(catalog['artists list'],new)
+    # artists map
+    new = infoartist_map(artist)
+    artistid = artist['ConstituentID'].strip('[]').replace(' ','')
+    mp.put(catalog['artists map'], artistid,new)
+    addArtist_id(catalog,artist)
+    # END
 
-def addartworkmedium(catalog, artwork):
-    medium = artwork['Medium']
-    entry = mp.get(catalog['mediums'], medium)
-    if entry:
-        artworkmedium = mp.get(catalog['mediums'], me.getValue(entry)['name'])
-        artworkmedium['value']['total_artworks'] += 1
-        lt.addLast(artworkmedium['value']['artworks'], artwork)
+def addArtist_id(catalog,artist):
+    mp.put(catalog['artists with ids'],artist['ConstituentID'],artist['DisplayName'])
+    mp.put(catalog['ids with artists'],artist['DisplayName'],artist['ConstituentID'])
 
-def infoartist(new,artist):
-    new['DisplayName'] = artist['DisplayName']
-    new['Nationality'] = artist['Nationality']
-    new['Gender'] = artist['Gender']
-    new['BeginDate'] = artist['BeginDate']
-    new['ConstituentID'] = artist['ConstituentID']
+def addArtistMedium(catalog,artistid,artwork):
+    # Add medium count
+    en = mp.get(catalog['artists map'],artistid)
+    person = me.getValue(en)
+    key = artwork['Medium']
+    if mp.contains(person['Mediums'],key):
+        entry = mp.get(person['Mediums'],key)
+        current = me.getValue(entry)
+        if key != '':
+            mp.put(person['Mediums'],key,current+1)
+    else:
+        if key != '':
+            mp.put(person['Mediums'],key,1)
+    # Add ArtworkNumber to artists map
+    person['ArtworkNumber'] += 1   # MAP
 
-def infoartwork(new,artwork):
+def addTopMedium(catalog):
+    # RUNS AFTER ALL FILES ARE LOADED AND AFTER addArtistMedium()
+    for i in lt.iterator(catalog['artists list']):
+        # Add MediumNumber to artists list and map
+        personID = i['ConstituentID'].strip()
+        person = me.getValue(mp.get(catalog['artists map'],personID))
+        mediums = person['Mediums']
+        person['MediumNumber'] = mp.size(mediums)     # MAP
+        i['MediumNumber'] = mp.size(mediums)         # LIST
+        # Add TopMedium to map
+        keys = mp.keySet(mediums)
+        big = 0
+        best = None
+        for j in lt.iterator(keys):
+            val = me.getValue(mp.get(mediums,j))
+            if val >= big:
+                big = val
+                best = j
+        person['TopMedium'] = best
+        # Add TopMedium artworks to map
+        for artwork in lt.iterator(catalog['artworks list 2']):
+            addTopMediumArtworks(artwork,person,best,personID)
+        # Add ArtworkNumber to list
+        i['ArtworkNumber'] = person['ArtworkNumber']
+
+def addTopMediumArtworks(artwork,person,best,artistID):
+    artid = artwork['ConstituentID'].strip('[]').replace(' ','').split(',')
+    if artwork['Medium'] == best and artistID in artid:
+        new = {}
+        new['ObjectID'] = artwork['ObjectID']
+        new['DateAcquired'] = artwork['DateAcquired']
+        lt.addLast(person['TopMedium artworks'],new)
+
+def addArtworkArtists(catalog,names,artid):
+    name = me.getValue(mp.get(catalog['artists with ids'],artid))
+    lt.addLast(names,name)
+
+# Funciones para creacion de datos
+
+def infoartwork_list1(artwork):
+    new = {}
     new['ObjectID'] = artwork['ObjectID']
+    new['Date'] = artwork['Date']
     new['Title'] = artwork['Title']
-    new['DateAcquired'] = artwork['DateAcquired']
+    new['Artists'] = lt.newList(datastructure='ARRAY_LIST')
+    new['Classification'] = artwork['Classification']
     new['Medium'] = artwork['Medium']
     new['Dimensions'] = artwork['Dimensions']
-    new['ConstituentID'] = artwork['ConstituentID']
+    new['Depth (cm)'] = artwork['Depth (cm)']
     new['Weight (kg)'] = artwork['Weight (kg)']
     new['Height (cm)'] = artwork['Height (cm)']
     new['Length (cm)'] = artwork['Length (cm)']
     new['Width (cm)'] = artwork['Width (cm)']
     new['Diameter (cm)'] = artwork['Diameter (cm)']
-    new['Department'] = artwork['Department']
-    new['Classification'] = artwork['Classification']
-    new['Date'] = artwork['Date']
+    keys = new.keys()
+    for i in keys:
+        if new[i] == '':
+            new[i] = 'NOT IDENTIFIED'
+    return new
+    
+
+def infoartwork_list2(artwork):
+    new = {}
+    new['ObjectID'] = artwork['ObjectID']
+    new['ConstituentID'] = artwork['ConstituentID']
+    new['DateAcquired'] = artwork['DateAcquired']
     new['CreditLine'] = artwork['CreditLine']
-
-# Funciones para creacion de datos
-
-def newartist():
-    new = {'name':None,'nationality':None,'gender':None,'birthday':None,'ID':None,'deathday':None,}
+    new['Title'] = artwork['Title']
+    new['Artists'] = lt.newList(datastructure='ARRAY_LIST')
+    new['Classification'] = artwork['Classification']
+    new['Medium'] = artwork['Medium']
+    new['Dimensions'] = artwork['Dimensions']
+    new['Date'] = artwork['Date']
+    keys = new.keys()
+    for i in keys:
+        if new[i] == '':
+            new[i] = 'NOT IDENTIFIED'
     return new
-def newartwork():
-    new = {'Title':None,'DateAcquired':None,'Medium':None,'Dimensions':None,'artistID':None,
-    'Weight (kg)':None,'Height (cm)':None,'Length (cm)':None,'Width (cm)':None, 'Department':None,'costo transporte':None,
-     'Classification':None, 'Date':None, 'CreditLine':None, 'ObjectID':None}
+
+def infoartist_list(artist):
+    new = {}
+    new['ConstituentID'] = artist['ConstituentID']
+    new['DisplayName'] = artist['DisplayName']
+    new['BeginDate'] = artist['BeginDate']
+    new['ArtworkNumber'] = 0
+    new['MediumNumber'] = 0
+    keys = new.keys()
+    for i in keys:
+        if new[i] == '':
+            new[i] = 'NOT IDENTIFIED'
     return new
-def newmedium(name):
-    """
-    Esta estructura crea una relación entre un tag y los libros que han sido
-    marcados con dicho tag.  Se guarga el total de libros y una lista con
-    dichos libros.
-    """
-    medium = {'name': '',
-           'total_artworks': 0,
-           'artworks': None}
-    medium['name'] = name
-    medium['artworks'] = lt.newList()
-    return medium
+
+def infoartist_map(artist):
+    new = {}
+    new['DisplayName'] = artist['DisplayName']
+    new['Gender'] = artist['Gender']
+    new['BeginDate'] = artist['BeginDate']
+    new['ArtworkNumber'] = 0
+    new['MediumNumber'] = 0
+    new['EndDate'] = artist['EndDate']
+    new['Nationality'] = artist['Nationality']
+    new['TopMedium'] = None
+    new['TopMedium artworks'] = lt.newList(datastructure='ARRAY_LIST', cmpfunction= cmpDateAcquired)
+    mediums = mp.newMap(3,maptype='PROBING',loadfactor=0.5)   #352
+    new['Mediums'] = mediums
+    keys = new.keys()
+    for i in keys:
+        if new[i] == '':
+            new[i] = 'NOT IDENTIFIED'
+    return new
 
 # Funciones de consulta
 
-def getartworksbymedium(catalog,medium):
-    entry = mp.get(catalog['mediums'],medium)
-    artworksbymedium = me.getValue(entry)['artworks']
-    mergesorting(artworksbymedium,'artworks')
-    return artworksbymedium
-
 # Funciones utilizadas para comparar elementos dentro de una lista
 
-def comparemedium(keymedium,medium):
-    mediumentry = me.getKey(medium)
-    if (keymedium == mediumentry):
-        return 0
-    elif (keymedium > mediumentry):
-        return 1
+def cmpDate(artworkI, artworkJ):
+    # Compares the artwork['Date']; artworkI, artworkJ are artwork elements
+    if artworkI['Date'] != '' and artworkI['Date'] != 'NOT IDENTIFIED':
+        di = int(artworkI['Date'].strip())
     else:
-        return -1
-def compareartistid(id1,id2):
-    year1 = id1['ConstituentID']
-    year2 = id2['ConstituentID']
-    d1 = datetime.date.fromisoformat(f'{year1}-01-01')
-    d2 = datetime.date.fromisoformat(f'{year2}-01-01')
-    ret = False
-    if d1 < d2:
-        ret = True
-    return ret
-def comparedateadquisition(artwork1,artwork2):
-    ret = False
-    if artwork1['DateAcquired'] != '' :
-        date1 = datetime.date.fromisoformat(artwork1['DateAcquired'])
+        di = int(datetime.date.today().year)
+    if artworkJ['Date'] != '' and artworkJ['Date'] != 'NOT IDENTIFIED':
+        dj = int(artworkJ['Date'].strip())
+    else:
+        dj = int(datetime.date.today().year)
+    if di <= dj:
+        return True
+    return False
+
+def cmpBeginDate(artistI, artistJ):
+    # Compares the artist['BeginDate']; artistI, artistJ are artist elements
+    if artistI['BeginDate'] != '' and artistI['BeginDate'] != 'NOT IDENTIFIED':
+        di = int(artistI['BeginDate'].strip())
+    else:
+        di = int(datetime.date.today().year)
+    if artistJ['BeginDate'] != '' and artistJ['BeginDate'] != 'NOT IDENTIFIED':
+        dj = int(artistJ['BeginDate'].strip())
+    else:
+        dj = int(datetime.date.today().year)
+    if di > dj:
+        return True
+    return False
+def cmpDateAcquired(artworkI,artworkJ):
+    # year-month-day
+    if artworkI['DateAcquired'] != '' and artworkI['DateAcquired'] != 'NOT IDENTIFIED':
+        date1 = datetime.date.fromisoformat(artworkI['DateAcquired'])
     else:
         date1 = datetime.date.today()
-    if artwork2['DateAcquired'] != '':
-        date2 = datetime.date.fromisoformat(artwork2['DateAcquired'])
+    if artworkJ['DateAcquired'] != '' and artworkJ['DateAcquired'] != 'NOT IDENTIFIED':
+        date2 = datetime.date.fromisoformat(artworkJ['DateAcquired'])
     else:
         date2 = datetime.date.today()
+    #print(f"{date1} < {date2} = {date1 < date2}")
     if date1 < date2:
-        ret = True
-    return ret
+        return True
+    return False
+
+def isoformat(datei,datej):
+    yi,mi,di = datei.year,datei.month,datei.day
+    yj,mj,dj = datej.year,datej.month,datej.day
+    if yi < yj:
+        return True
+    elif yi == yj:
+        if mi < mj:
+            return True
+        elif mi == mj:
+            if di <= dj:
+                return True
+            else:
+                return False
+        else:
+            return False
+    else:
+        return False
+
 
 # Funciones de ordenamiento
 
-def insertionsorting(lst, target):
-    cmpfunction = comparedateadquisition
-    if target == 'artists':
-        cmpfunction = compareartistid
+def insertionsorting(lst, cmp):
     start_time = time.process_time()
-    ordenada = insertion.sort(lst,cmpfunction)
+    sortedL = insertion.sort(lst,cmp)
     stop_time = time.process_time()
     elapsed_time_mseg = (stop_time - start_time)*1000
-    return (ordenada, f'time: {elapsed_time_mseg}')
+    return (sortedL, f'time: {elapsed_time_mseg}')
 
-def mergesorting(lst, target):
-    cmpfunction = comparedateadquisition
-    if target == 'artists':
-        cmpfunction = compareartistid
+def mergesorting(lst, cmp):
     start_time = time.process_time()
-    ordenada = merge.sort(lst, cmpfunction)
+    sortedL = merge.sort(lst, cmp)
     stop_time = time.process_time()
     elapsed_time_mseg = (stop_time - start_time)*1000
-    return (ordenada, f'time: {elapsed_time_mseg}')
+    return (sortedL, f'time: {elapsed_time_mseg}')
      
-def quicksorting(lst, target):
-    cmpfunction = comparedateadquisition
-    if target == 'artists':
-        cmpfunction = compareartistid
+def quicksorting(lst, cmp):
     start_time = time.process_time()
-    ordenada = quick.sort(lst, cmpfunction)
+    sortedL = quick.sort(lst, cmp)
     stop_time = time.process_time()
     elapsed_time_mseg = (stop_time - start_time)*1000
-    return (ordenada, f'time: {elapsed_time_mseg}')
+    return (sortedL, f'time: {elapsed_time_mseg}')
     
-def shellsorting(lst, target):
-    cmpfunction = comparedateadquisition
-    if target == 'artists':
-        cmpfunction = compareartistid
+def shellsorting(lst, cmp):
     start_time = time.process_time()
-    ordenada = shell.sort(lst, cmpfunction)
+    sortedL = shell.sort(lst, cmp)
     stop_time = time.process_time()
     elapsed_time_mseg = (stop_time - start_time)*1000
-    return (ordenada, f'time: {elapsed_time_mseg}')
+    return (sortedL, f'time: {elapsed_time_mseg}')
 
 
 
 """
-REQ 1: 
-    Find artists born in a specific range of years
-        PRINT:  Total artists born in range  
-                |  for the initial 3 and last 3 -> (DisplayName, BeginDate, EndDate, Nationality, Gender)
-REQ 2: 
-    Find artworks adquired in a specific range of date
-        PRINT:  Total artworks adquired in range  |  Total artworks such that ("pucharse" in artwork["CreditLine"])  
-                |  for the 3 artists with the most artworks and 3 artists with the least artworks -> (Title, Artists transformed from ConstituentID's,
-                DateAcquired, Medium, Dimensions)
-REQ 3: 
-    Artworks classification of an artists by medium
-        PRINT:  Total artist's artworks  |  Total mediums used  |  Most used technique  
-                |  for the initial 3 and last 3 -> (Title, DateAcquired, Medium, Dimensions)
-REQ 5: 
-    Transport artworks of a department
-        PRINT: Total artworks to transport  |  Stimated price of service  |  Stimated weigh of service  
-                |  for the most ancient 5 and most expensive 5 -> (Title, Artists transformed from ConstituentID's, Classification, DateAcquired, Medium, Dimensions,
-                Cost of transportation)
-REQ 6: 
-    Find the best n (input) prolific artists in the classification in a range of years
-        PRINT:  For each artist -> (Total artworks, Total mediums used, Most used Medium,
-                For the first 5 artworks of that artist with the most used Medium -> (Title, DateAcquired, Medium, Dimensions)
+def test_one(catalog):
+    # Tests catalog['artists map']
+    j = 0
+    for i in lt.iterator(catalog['artists list']):
+        artistID = i['ConstituentID']
+        person = mp.get(catalog['artists map'],artistID)['value']
+        if j == 5: # Test for the #j artist (no order in special)
+            print('------------------------------------------------------------------')
+            print(f"\n\nTESTING FOR THE ARTIST: {artistID} - {i['DisplayName']}")
+            print('__________________________________________________________________')
+            print('\nMediums:')
+            mkeys = mp.keySet(person['Mediums'])
+            valsum = 0
+            for j in lt.iterator(mkeys):
+                mentry = mp.get(person['Mediums'],j)
+                key = mentry['key']
+                val = mentry['value']
+                valsum += val
+                print(f"ArtistID - {artistID}  :  {key}  :  {val}")
+            print(f"SUM OF MEDIUMS VALUES = {valsum}")
+            print('__________________________________________________________________')
+            print('\nTopMedium:')
+            print(f"TOP  :  {person['TopMedium']}")
+            print('__________________________________________________________________')
+            print('\nTopMedium artworks:')
+            for k in lt.iterator(person['TopMedium artworks']):
+                temp = mp.get(catalog['artworks map'],k['ObjectID'])['value']['ConstituentID']
+                artid = temp.strip('[]').replace(' ','').split(',')
+                print(f"ObjectID - {k['ObjectID']}  :  {k['DateAcquired']}  :  ARTISTS ARE SHOWN BELOW -->")
+                for l in artid:
+                    name = mp.get(catalog['artists with ids'],l)['value']
+                    print(f'ARTIST: {name} --- {l}')
+            print('__________________________________________________________________')
+            print(f"\nMediumNumber = {person['MediumNumber']}")
+            print(f"ArtworkNumber = {person['ArtworkNumber']}")
+            print('------------------------------------------------------------------')
+            break
+        j += 1
+    # END
 """
