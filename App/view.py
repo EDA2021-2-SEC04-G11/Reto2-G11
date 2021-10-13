@@ -27,8 +27,8 @@ from DISClib.ADT import list as lt
 from DISClib.ADT import map as mp
 assert cf
 
-#default_limit = 1000
-#sys.setrecursionlimit(default_limit*10)
+default_limit = 1000
+sys.setrecursionlimit(default_limit*10)
 
 """
 La vista se encarga de la interacción con el usuario
@@ -36,7 +36,7 @@ Presenta el menu de opciones y por cada seleccion
 se hace la solicitud al controlador para ejecutar la
 operación solicitada
 """
-print('Yes')
+
 def printMenu():
     print("Bienvenido")
     print("1- Listar cronologicamente los artistas - REQ 1")
@@ -46,15 +46,15 @@ def printMenu():
     print("6- Listar cronologicamente las adquisiciones - REQ 6")
 
 def initcatalog():
-    return #controller.initcatalog()
+    return controller.initcatalog()
 
 def loaddata(catalog):
-    #controller.loaddata(catalog)
-    pass
+    controller.loaddata(catalog)
 
 """
 Menu principal
 """
+
 while True:
     print('\n\n SE PROCEDERA A CARGAR LOS DATOS \n\n')
     print("Cargando información de los archivos ....")

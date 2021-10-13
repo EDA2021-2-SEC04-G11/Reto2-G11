@@ -81,8 +81,6 @@ def initcatalog():
 # Funciones para agregar informacion al catalogo
 
 def sortData(catalog):
-    for i in lt.iterator(catalog['artists list']):
-        print(f'\ni\n')
     # Sort catalog['artists list'] by BeginDate (YYYY)
     cmp = cmpBeginDate
     lst = catalog['artists list']

@@ -70,8 +70,3 @@ def sort():
     c+=1
     return c
 
-
-count = 0
-finished = False
-while not finished:
-    count += sort()
