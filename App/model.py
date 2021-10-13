@@ -112,8 +112,6 @@ def sortData(catalog):
         target = me.getValue(mp.get(catalog['Mediums'],i))
         lst = target['Artworks']
         quicksorting(lst,cmp)
-    for j in lt.iterator(catalog['Mediums list']):
-        target = me.getValue(mp.get(catalog['Mediums'],j))
     # END
 
 def addArtwork(catalog,artwork):
