@@ -60,13 +60,4 @@ def loadartworks(catalog):
 
 
 # Funciones de consulta sobre el catálogo
-def sort():
-    c = 0
-    #COMPARISON
-    c+=1
-    #COMPARISON
-    c+=1
-    #COMPARISON
-    c+=1
-    return c
 

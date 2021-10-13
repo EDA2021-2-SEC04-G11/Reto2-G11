@@ -27,12 +27,12 @@
 import datetime
 import sys
 import time
-from DISClib.DataStructures.chaininghashtable import get
+from DISClib.DataStructures.arraylist import iterator
 import config as cf
 from DISClib.ADT import list as lt
 from DISClib.ADT import map as mp
 from DISClib.DataStructures import mapentry as me
-from DISClib.Algorithms.Sorting import shellsort as sa
+from DISClib.Algorithms.Sorting import shellsort as shellsort
 from DISClib.Algorithms.Sorting import insertionsort as insertion
 from DISClib.Algorithms.Sorting import mergesort as merge
 from DISClib.Algorithms.Sorting import quicksort as quick
@@ -44,7 +44,7 @@ assert cf
 def initcatalog():
     # Number of artists in large file: 15224
     # Number of artworks in large file: 150681
-    # Number of mediums in large file: 21251
+    # Number of mediums in large file: 21251     ||| In small file: 383
     # Number of max mediums for an artist in large file: 352, id: 41829
     catalog = {
         'artists list':None,
@@ -54,6 +54,7 @@ def initcatalog():
         'artworks map':None,
         'artists with ids':None,
         'ids with artists':None,
+        'Mediums': None
     }
     catalog['artists list'] = lt.newList(datastructure='ARRAY_LIST')
     catalog['artists map'] = mp.newMap(15224,maptype='PROBING',loadfactor=0.5)
@@ -61,7 +62,10 @@ def initcatalog():
     catalog['artworks list 2'] = lt.newList(datastructure='ARRAY_LIST')
     catalog['artworks map'] = mp.newMap(150681,maptype='PROBING',loadfactor=0.5)  
     catalog['artists with ids'] = mp.newMap(15224,maptype='PROBING',loadfactor=0.5) 
-    catalog['ids with artists'] = mp.newMap(15224,maptype='PROBING',loadfactor=0.5)  
+    catalog['ids with artists'] = mp.newMap(15224,maptype='PROBING',loadfactor=0.5) 
+    catalog['Mediums'] = mp.newMap(21251,maptype='PROBING',loadfactor=0.5)
+    catalog['Mediums list'] = lt.newList(datastructure='ARRAY_LIST')
+
     """
     METHOD 1  -----  Currently using  -----  
     catalog['artists list'] : TAD LIST SORTED BY BeginDate( ConstituentID, DisplayName, BeginDate, ArtworkNumber, MediumNumber  )     |||||    REQ 6,3,1  
@@ -75,6 +79,8 @@ def initcatalog():
                                                                  Classification, Medium, Dimensions, Date)     |||||    REQ 6,3,1
     catalog['artists with ids'] : TAD MAP( ConstituentID : DisplayName )     |||||    REQ 5,2
     catalog['ids with artists'] : TAD MAP( DisplayName : ConstituentID )     |||||    REQ 5
+    catalog['Mediums'] : TAD MAP(  Medium -> count, Artworks : TAD LIST SORTED BY Date(ObjectID, Date)  )
+    catalog['Mediums list'] : TAD LIST(  Medium: None  )
     """
     return catalog
 
@@ -85,7 +91,7 @@ def sortData(catalog):
     cmp = cmpBeginDate
     lst = catalog['artists list']
     quicksorting(lst,cmp)
-    # Sort the key   'TopMedium artworks'  : catalog['artists map'] ---> key = 'TopMedium artworks' ; by DateAcquired (MM-DD-YYYY) for each artist
+    # Sort the key   'TopMedium artworks'  : catalog['artists map'] ---> (key = 'TopMedium artworks)' ; by DateAcquired (YYYY-MM-DD) for each artist
     cmp = cmpDateAcquired
     for i in lt.iterator(catalog['artists list']):
         key = i['ConstituentID']
@@ -100,6 +106,14 @@ def sortData(catalog):
     cmp = cmpDateAcquired
     lst = catalog['artworks list 2']
     quicksorting(lst,cmp) 
+    # Sort 'Artworks' key for each catalog['Mediums'] element in catalog
+    cmp = cmpDate
+    for i in lt.iterator(catalog['Mediums list']):
+        target = me.getValue(mp.get(catalog['Mediums'],i))
+        lst = target['Artworks']
+        quicksorting(lst,cmp)
+    for j in lt.iterator(catalog['Mediums list']):
+        target = me.getValue(mp.get(catalog['Mediums'],j))
     # END
 
 def addArtwork(catalog,artwork):
@@ -119,6 +133,22 @@ def addArtwork(catalog,artwork):
     lt.addLast(catalog['artworks list 2'],new2)
     # Artworks map
     mp.put(catalog['artworks map'],artwork['ObjectID'],new2)
+    # Mediums map
+    if artwork['Medium'] != '':
+        if not mp.contains(catalog['Mediums'],artwork['Medium']):
+            lt.addLast(catalog['Mediums list'],artwork['Medium'])
+            new = infoMediums()
+            mp.put(catalog['Mediums'],artwork['Medium'],new)
+        target = me.getValue(mp.get(catalog['Mediums'],artwork['Medium']))
+        target['count'] += 1
+        new = {}
+        new['ObjectID'] = artwork['ObjectID']
+        new['Date'] = artwork['Date']
+        keys = new.keys()
+        for i in keys:
+            if new[i] == '':
+                new[i] = 'NOT IDENTIFIED'
+        lt.addLast(target['Artworks'],new)
     # END
 
 def addArtist(catalog,artist):
@@ -171,9 +201,10 @@ def addTopMedium(catalog):
                 big = val
                 best = j
         person['TopMedium'] = best
-        # Add TopMedium artworks to map
+        # Add TopMedium artworks to map and add Medium to Mediums list
         for artwork in lt.iterator(catalog['artworks list 2']):
             addTopMediumArtworks(artwork,person,best,personID)
+            #mp.put(catalog['Mediums map'],artwork['Medium'],None)
         # Add ArtworkNumber to list
         i['ArtworkNumber'] = person['ArtworkNumber']
 
@@ -183,6 +214,10 @@ def addTopMediumArtworks(artwork,person,best,artistID):
         new = {}
         new['ObjectID'] = artwork['ObjectID']
         new['DateAcquired'] = artwork['DateAcquired']
+        keys = new.keys()
+        for i in keys:
+            if new[i] == '':
+                new[i] = 'NOT IDENTIFIED'
         lt.addLast(person['TopMedium artworks'],new)
 
 def addArtworkArtists(catalog,names,artid):
@@ -190,6 +225,12 @@ def addArtworkArtists(catalog,names,artid):
     lt.addLast(names,name)
 
 # Funciones para creacion de datos
+
+def infoMediums():
+    new = {}
+    new['count'] = 0
+    new['Artworks'] = lt.newList(datastructure='ARRAY_LIST')
+    return new
 
 def infoartwork_list1(artwork):
     new = {}
@@ -212,7 +253,6 @@ def infoartwork_list1(artwork):
             new[i] = 'NOT IDENTIFIED'
     return new
     
-
 def infoartwork_list2(artwork):
     new = {}
     new['ObjectID'] = artwork['ObjectID']
