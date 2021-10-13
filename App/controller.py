@@ -44,13 +44,13 @@ def loaddata(catalog):
     #model.test_one(catalog)
 
 def loadartists(catalog):
-    artistsfile = cf.data_dir + 'MoMA/Artists-utf8-small.csv'
+    artistsfile = cf.data_dir + 'MoMA/Artists-utf8-large.csv'
     artistsFile = csv.DictReader(open(artistsfile, encoding='utf-8'))
     for artist in artistsFile:
         model.addArtist(catalog,artist)
     
 def loadartworks(catalog):
-    artworksfile = cf.data_dir + 'MoMA/Artworks-utf8-small.csv'
+    artworksfile = cf.data_dir + 'MoMA/Artworks-utf8-large.csv'
     artworksFile = csv.DictReader(open(artworksfile, encoding='utf-8'))
     for artwork in artworksFile:
         model.addArtwork(catalog,artwork)
@@ -60,3 +60,18 @@ def loadartworks(catalog):
 
 
 # Funciones de consulta sobre el catálogo
+def sort():
+    c = 0
+    #COMPARISON
+    c+=1
+    #COMPARISON
+    c+=1
+    #COMPARISON
+    c+=1
+    return c
+
+
+count = 0
+finished = False
+while not finished:
+    count += sort()
