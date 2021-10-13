@@ -28,6 +28,7 @@ import datetime
 import sys
 import time
 from DISClib.DataStructures.arraylist import iterator
+from DISClib.DataStructures.chaininghashtable import get
 import config as cf
 from DISClib.ADT import list as lt
 from DISClib.ADT import map as mp
@@ -46,6 +47,7 @@ def initcatalog():
     # Number of artworks in large file: 150681
     # Number of mediums in large file: 21251     ||| In small file: 383
     # Number of max mediums for an artist in large file: 352, id: 41829
+    # Number of nationalities found through artworks interactions in large file: 64570,best = American    ||| small file: Amercian - 451
     catalog = {
         'artists list':None,
         'artists map':None,
@@ -54,7 +56,8 @@ def initcatalog():
         'artworks map':None,
         'artists with ids':None,
         'ids with artists':None,
-        'Mediums': None
+        'Mediums': None,
+        'nationality':None
     }
     catalog['artists list'] = lt.newList(datastructure='ARRAY_LIST')
     catalog['artists map'] = mp.newMap(15224,maptype='PROBING',loadfactor=0.5)
@@ -65,6 +68,7 @@ def initcatalog():
     catalog['ids with artists'] = mp.newMap(15224,maptype='PROBING',loadfactor=0.5) 
     catalog['Mediums'] = mp.newMap(21251,maptype='PROBING',loadfactor=0.5)
     catalog['Mediums list'] = lt.newList(datastructure='ARRAY_LIST')
+    catalog['nationality'] = mp.newMap(64570,maptype='PROBING',loadfactor=0.5) 
 
     """
     METHOD 1  -----  Currently using  -----  
@@ -81,6 +85,7 @@ def initcatalog():
     catalog['ids with artists'] : TAD MAP( DisplayName : ConstituentID )     |||||    REQ 5
     catalog['Mediums'] : TAD MAP(  Medium -> count, Artworks : TAD LIST SORTED BY Date(ObjectID, Date)  )
     catalog['Mediums list'] : TAD LIST(  Medium: None  )
+    catalog['nationality'] : TAD MAP(  Nationality -> artworks : TAD LIST( ObjectID )  )
     """
     return catalog
 
@@ -118,12 +123,23 @@ def addArtwork(catalog,artwork):
     # Create artwork model that will be added to the catalog
     new1 = infoartwork_list1(artwork)
     new2 = infoartwork_list2(artwork)
-    # Add artists of artwork to the artwork models created
+    # Add artists of artwork to the artwork models created´and add 'nationality'
     artid = artwork['ConstituentID'].strip('[]').replace(' ','').split(',')
     names = lt.newList(datastructure='ARRAY_LIST')
     for i in artid:
         addArtistMedium(catalog,i,artwork)
         addArtworkArtists(catalog,names,i)
+        # nationality
+        new = {}
+        new['artworks'] = lt.newList(datastructure='ARRAY_LIST')
+        nation = me.getValue(mp.get(catalog['artists map'],i))['Nationality']
+        if mp.contains(catalog['nationality'],nation):
+            target = me.getValue(mp.get(catalog['nationality'],nation))
+            lt.addLast(target['artworks'],artwork['ObjectID'])
+        else:
+            new = {}
+            new['artworks'] = lt.newList(datastructure='ARRAY_LIST')
+            mp.put(catalog['nationality'],nation,new)
     new1['Artists'] = names
     new2['Artists'] = names
     # Artworks Lists
@@ -147,6 +163,7 @@ def addArtwork(catalog,artwork):
             if new[i] == '':
                 new[i] = 'NOT IDENTIFIED'
         lt.addLast(target['Artworks'],new)
+    # Nationality map
     # END
 
 def addArtist(catalog,artist):
