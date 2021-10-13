@@ -72,7 +72,7 @@ def initcatalog():
     catalog['artworks list 2'] : TAD LIST SORTED BY DateAcquired( ObjectID, ConstituentID, DateAcquired, CreditLine, Title, Artists : TAD LIST(DisplayName),
                                                                  Classification, Medium, Dimensions, Date )     |||||    REQ 2
     catalog['artworks map'] : TAD MAP(ObjectID --> ConstituentID, DateAcquired, CreditLine, Title, Artists : TAD LIST(DisplayName),
-                                                                 Classification, Medium, Dimensions, Date)
+                                                                 Classification, Medium, Dimensions, Date)     |||||    REQ 6,3,1
     catalog['artists with ids'] : TAD MAP( ConstituentID : DisplayName )     |||||    REQ 5,2
     catalog['ids with artists'] : TAD MAP( DisplayName : ConstituentID )     |||||    REQ 5
     """
@@ -81,6 +81,8 @@ def initcatalog():
 # Funciones para agregar informacion al catalogo
 
 def sortData(catalog):
+    for i in lt.iterator(catalog['artists list']):
+        print(f'\ni\n')
     # Sort catalog['artists list'] by BeginDate (YYYY)
     cmp = cmpBeginDate
     lst = catalog['artists list']
