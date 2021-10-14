@@ -62,3 +62,5 @@ def loadartworks(catalog):
 
 # Funciones de consulta sobre el catálogo
 
+def lab5(catalog,medium,n):
+    return model.lab5(catalog,medium,n)

@@ -39,6 +39,8 @@ operación solicitada
 
 def printMenu():
     print("Bienvenido")
+    print("7- las n obras más antiguas para un medio específico - LAB 5")
+    print("8- Número total de obras de una nacionalidad  - LAB 6")
     print("1- Listar cronologicamente los artistas - REQ 1")
     print("2- Listar cronologicamente las adquisiciones - REQ 2")
     print("3- Clasificar las obras de un artista por tecnica - REQ 3")
@@ -51,16 +53,33 @@ def initcatalog():
 def loaddata(catalog):
     controller.loaddata(catalog)
 
+def lab5(catalog):
+    medium = input('Medio?\n').strip()
+    n = int(input('Cuantas obras?\n').strip())
+    collection = controller.lab5(catalog,medium,n)   # Returns (TAD LIST,int)
+    artworks = collection[0]
+    count = collection[1] 
+    print(f'\nSe encontraron {count} obras en el medio {medium}.')
+    for i in lt.iterator(artworks):
+        print(f"ObjectID = {i['ObjectID']} || Date = {i['Date']}")
+    print('\n')
+    # END
+
+def lab6(catalog):
+    pass
+
 """
 Menu principal
 """
-
+charged = False
 while True:
-    print('\n\n SE PROCEDERA A CARGAR LOS DATOS \n\n')
-    print("Cargando información de los archivos ....")
-    catalog = initcatalog()
-    loaddata(catalog)
-    print('\n\n INFORMACION CARGADA COMPLETAMENTE \n\n')
+    if not charged:
+        print('\n\n SE PROCEDERA A CARGAR LOS DATOS \n\n')
+        print("Cargando información de los archivos ....")
+        catalog = initcatalog()
+        loaddata(catalog)
+        charged = True
+        print('\n\n INFORMACION CARGADA COMPLETAMENTE \n\n')
     printMenu()
     inputs = input('Seleccione EL REQUISITO para continuar\n')
     if int(inputs[0]) == 1:
@@ -73,6 +92,10 @@ while True:
         pass
     elif int(inputs[0]) == 6:
         pass
+    elif int(inputs[0]) == 7:
+        lab5(catalog)
+    elif int(inputs[0]) == 8:
+        lab6(catalog)
     else:
         sys.exit(0)
 #sys.exit(0)

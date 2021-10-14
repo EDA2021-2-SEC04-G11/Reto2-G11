@@ -320,6 +320,15 @@ def infoartist_map(artist):
 
 # Funciones de consulta
 
+def lab5(catalog,medium,n):
+    target = me.getValue(mp.get(catalog['Mediums'],medium))
+    lst = target['Artworks']
+    count = target['count']
+    if n > lt.size(lst):
+        return lst,count
+    artworks = lt.subList(lst,1,n)
+    return artworks,count
+
 # Funciones utilizadas para comparar elementos dentro de una lista
 
 def cmpDate(artworkI, artworkJ):
