@@ -64,11 +64,11 @@ def initcatalog():
     catalog['artworks list'] = lt.newList(datastructure='ARRAY_LIST')
     catalog['artworks list 2'] = lt.newList(datastructure='ARRAY_LIST')
     catalog['artworks map'] = mp.newMap(150681,maptype='PROBING',loadfactor=0.5)  
-    catalog['artists with ids'] = mp.newMap(15224,maptype='PROBING',loadfactor=0.5) 
-    catalog['ids with artists'] = mp.newMap(15224,maptype='PROBING',loadfactor=0.5) 
-    catalog['Mediums'] = mp.newMap(21251,maptype='PROBING',loadfactor=0.5)
+    catalog['artists with ids'] = mp.newMap(15224,maptype='CHAINING',loadfactor=4) 
+    catalog['ids with artists'] = mp.newMap(15224,maptype='CHAINING',loadfactor=4) 
+    catalog['Mediums'] = mp.newMap(21251,maptype='CHAINING',loadfactor=4)
     catalog['Mediums list'] = lt.newList(datastructure='ARRAY_LIST')
-    catalog['nationality'] = mp.newMap(64570,maptype='PROBING',loadfactor=0.5) 
+    catalog['nationality'] = mp.newMap(64570,maptype='CHAINING',loadfactor=4) 
 
     """
     METHOD 1  -----  Currently using  -----  
@@ -130,8 +130,6 @@ def addArtwork(catalog,artwork):
         addArtistMedium(catalog,i,artwork)
         addArtworkArtists(catalog,names,i)
         # nationality
-        new = {}
-        new['artworks'] = lt.newList(datastructure='ARRAY_LIST')
         nation = me.getValue(mp.get(catalog['artists map'],i))['Nationality']
         if mp.contains(catalog['nationality'],nation):
             target = me.getValue(mp.get(catalog['nationality'],nation))
@@ -148,7 +146,7 @@ def addArtwork(catalog,artwork):
     # Artworks map
     mp.put(catalog['artworks map'],artwork['ObjectID'],new2)
     # Mediums map
-    if artwork['Medium'] != '':
+    if artwork['Medium'] != '' or artwork['Medium'] != ' ':
         if not mp.contains(catalog['Mediums'],artwork['Medium']):
             lt.addLast(catalog['Mediums list'],artwork['Medium'])
             new = infoMediums()
@@ -175,6 +173,11 @@ def addArtist(catalog,artist):
     artistid = artist['ConstituentID'].strip('[]').replace(' ','')
     mp.put(catalog['artists map'], artistid,new)
     addArtist_id(catalog,artist)
+    # Nationality
+    nation = artist['Nationality'].strip()
+    new = {}
+    new['artworks'] = lt.newList(datastructure='ARRAY_LIST')
+    mp.put(catalog['nationality'],nation,new)
     # END
 
 def addArtist_id(catalog,artist):
@@ -264,7 +267,7 @@ def infoartwork_list1(artwork):
     new['Diameter (cm)'] = artwork['Diameter (cm)']
     keys = new.keys()
     for i in keys:
-        if new[i] == '':
+        if new[i] == '' or new[i] == ' ':
             new[i] = 'NOT IDENTIFIED'
     return new
     
@@ -282,7 +285,7 @@ def infoartwork_list2(artwork):
     new['Date'] = artwork['Date']
     keys = new.keys()
     for i in keys:
-        if new[i] == '':
+        if new[i] == '' or new[i] == ' ':
             new[i] = 'NOT IDENTIFIED'
     return new
 
@@ -314,7 +317,7 @@ def infoartist_map(artist):
     new['Mediums'] = mediums
     keys = new.keys()
     for i in keys:
-        if new[i] == '':
+        if new[i] == '' or new[i] == ' ':
             new[i] = 'NOT IDENTIFIED'
     return new
 
@@ -328,6 +331,14 @@ def lab5(catalog,medium,n):
         return lst,count
     artworks = lt.subList(lst,1,n)
     return artworks,count
+
+def lab6(catalog,nation):
+    try:
+        target = me.getValue(mp.get(catalog['nationality'],nation))
+        lst = target['artworks']
+        return lt.size(lst)
+    except:
+        return None
 
 # Funciones utilizadas para comparar elementos dentro de una lista
 
@@ -358,6 +369,7 @@ def cmpBeginDate(artistI, artistJ):
     if di > dj:
         return True
     return False
+
 def cmpDateAcquired(artworkI,artworkJ):
     # year-month-day
     if artworkI['DateAcquired'] != '' and artworkI['DateAcquired'] != 'NOT IDENTIFIED':
@@ -372,25 +384,6 @@ def cmpDateAcquired(artworkI,artworkJ):
     if date1 < date2:
         return True
     return False
-
-def isoformat(datei,datej):
-    yi,mi,di = datei.year,datei.month,datei.day
-    yj,mj,dj = datej.year,datej.month,datej.day
-    if yi < yj:
-        return True
-    elif yi == yj:
-        if mi < mj:
-            return True
-        elif mi == mj:
-            if di <= dj:
-                return True
-            else:
-                return False
-        else:
-            return False
-    else:
-        return False
-
 
 # Funciones de ordenamiento
 

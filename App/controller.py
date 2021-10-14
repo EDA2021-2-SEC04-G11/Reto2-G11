@@ -64,3 +64,6 @@ def loadartworks(catalog):
 
 def lab5(catalog,medium,n):
     return model.lab5(catalog,medium,n)
+
+def lab6(catalog,nation):
+    return model.lab6(catalog,nation)

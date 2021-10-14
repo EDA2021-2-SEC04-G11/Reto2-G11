@@ -26,6 +26,7 @@ import controller
 from DISClib.ADT import list as lt
 from DISClib.ADT import map as mp
 assert cf
+import time
 
 default_limit = 1000
 sys.setrecursionlimit(default_limit*10)
@@ -54,6 +55,7 @@ def loaddata(catalog):
     controller.loaddata(catalog)
 
 def lab5(catalog):
+    start_time = time.process_time()
     medium = input('Medio?\n').strip()
     n = int(input('Cuantas obras?\n').strip())
     collection = controller.lab5(catalog,medium,n)   # Returns (TAD LIST,int)
@@ -63,10 +65,22 @@ def lab5(catalog):
     for i in lt.iterator(artworks):
         print(f"ObjectID = {i['ObjectID']} || Date = {i['Date']}")
     print('\n')
+    stop_time = time.process_time()
+    elapsed_time_mseg = (stop_time - start_time)*1000
+    print(f"TIME : {elapsed_time_mseg}")
     # END
 
 def lab6(catalog):
-    pass
+    start_time = time.process_time()
+    nation = input('Nacionalidad?\n').strip()
+    count = controller.lab6(catalog,nation)
+    if count == None:
+        print('\nDesafortunadamente no se encontro esa nacionalidad.\n')
+        return
+    print(f'\nSe encontraron {count} obras con la nacionalidad dada.\n')
+    stop_time = time.process_time()
+    elapsed_time_mseg = (stop_time - start_time)*1000
+    print(f"TIME : {elapsed_time_mseg}")
 
 """
 Menu principal
@@ -74,12 +88,16 @@ Menu principal
 charged = False
 while True:
     if not charged:
+        start_time = time.process_time()
         print('\n\n SE PROCEDERA A CARGAR LOS DATOS \n\n')
         print("Cargando información de los archivos ....")
         catalog = initcatalog()
         loaddata(catalog)
         charged = True
         print('\n\n INFORMACION CARGADA COMPLETAMENTE \n\n')
+        stop_time = time.process_time()
+        elapsed_time_mseg = (stop_time - start_time)*1000
+        print(f"TIME : {elapsed_time_mseg}")
     printMenu()
     inputs = input('Seleccione EL REQUISITO para continuar\n')
     if int(inputs[0]) == 1:
