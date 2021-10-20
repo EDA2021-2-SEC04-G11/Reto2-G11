@@ -55,11 +55,6 @@ def loadartworks(catalog):
     for artwork in artworksFile:
         model.addArtwork(catalog,artwork)
 
-
-# Funciones de ordenamiento
-
-
-
 # Funciones de consulta sobre el catálogo
 
 def lab5(catalog,medium,n):
@@ -67,3 +62,12 @@ def lab5(catalog,medium,n):
 
 def lab6(catalog,nation):
     return model.lab6(catalog,nation)
+
+def req1(catalog,yi,yf):
+  return model.req1(catalog,yi,yf)
+
+def req3(catalog,artist):
+    return model.req3(catalog,artist)
+
+def req6(catalog,yi,yf,n):
+    return model.req6(catalog,yi,yf,n)
