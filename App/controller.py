@@ -44,13 +44,13 @@ def loaddata(catalog):
     #model.test_one(catalog)
 
 def loadartists(catalog):
-    artistsfile = cf.data_dir + 'MoMA/Artists-utf8-20pct.csv'
+    artistsfile = cf.data_dir + 'MoMA/Artists-utf8-large.csv'
     artistsFile = csv.DictReader(open(artistsfile, encoding='utf-8'))
     for artist in artistsFile:
         model.addArtist(catalog,artist)
     
 def loadartworks(catalog):
-    artworksfile = cf.data_dir + 'MoMA/Artworks-utf8-20pct.csv'
+    artworksfile = cf.data_dir + 'MoMA/Artworks-utf8-large.csv'
     artworksFile = csv.DictReader(open(artworksfile, encoding='utf-8'))
     for artwork in artworksFile:
         model.addArtwork(catalog,artwork)
