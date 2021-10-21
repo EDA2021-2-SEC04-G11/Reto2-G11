@@ -27,6 +27,7 @@ from DISClib.ADT import list as lt
 from DISClib.ADT import map as mp
 assert cf
 import time
+import datetime
 
 default_limit = 1000
 sys.setrecursionlimit(default_limit*10)
@@ -91,7 +92,32 @@ def req1(catalog):
     print('=======================================================================')
 
 def req2(catalog):
-    pass
+    # 1944-06-06 and 1989-11-09
+    try:
+        di = datetime.date.fromisoformat(input('Fecha de Adquisicion Inicial?\n').strip())
+        df = datetime.date.fromisoformat(input('Fecha de Adquisicion Final?\n').strip())
+    except:
+        print('Introduce el año en un formato valido (yyyy-mm-dd).')
+        return
+    start_time = time.process_time()
+    collection = controller.req2(catalog,di,df)
+    stop_time = time.process_time()
+    timef = (stop_time - start_time)*1000
+    lst = collection[0]
+    count = collection[1]
+    co = collection[2]
+    print('============================ REQ #2 Answer ============================')
+    print(f'Hay {count} adquiridas entre la fecha {di} y la fecha {df}.')
+    print(f'El número de obras adquiridas por la forma Purchase son {co}')
+    print('Las tres primeras y las tres ultimas obras dentro del rango son:...')
+    for i in lt.iterator(lst):
+        print('=======================================================================')
+        print(f"Title: {i['Title']}\n") 
+        print(f"Artist: {i['Artists']['elements']}\n")
+        print(f"DateAcquired: {i['DateAcquired']} || Medium: {i['Medium']} || Dimensions: {i['Dimensions']}")
+    print(f"\nTIME USED: {timef}")
+    print('=======================================================================')
+
 
 def req3(catalog):
     # Louise Bourgeois
@@ -121,32 +147,51 @@ def req3(catalog):
     print('=======================================================================')
 
 def req4(catalog):
+
+    collection = controller.req4(catalog)
+
+    n = collection[0]
+    top3 = collection[1]
+    print('============================ REQ #3 Answer ============================')
+    i = 0
+    while i < 10:
+      print('=======================================================================')
+      print(f"Nacionalidad: {n['i']}\n") 
+      i+=1
+
+    print('=======================================================================')
+
     pass
 
 def req5(catalog):
     # Drawings & Prints
-    dep = str(input('Departamento a Transferir:?\n'))
+    dep = input('Departamento a Transferir?\n')
+    start_time = time.process_time()
     collection = controller.req5(catalog, dep)
-    #list.size(), total, pesot, top5A1, top5A2, top5C1, top5C2
-    nObras = collection[0]
-    costo = collection[1]
-    peso = collection[2]
-    T5A1 = collection[3]
-    t5A2 = collection[4]
-    T5C1 = collection[5]
-    t5C2 = collection[6]
+    stop_time = time.process_time()
+    timef = (stop_time - start_time)*1000
+    total_cost = collection[0]
+    weight = collection[1]
+    count = collection[2]
+    leaderboard = collection[3]
+    oldest = collection[4]
     print('============================ REQ #5 Answer ============================')
-    print(f'Hay {nObras} en el departamento {dep}.')
-    print(f'El costo total del traslado es{costo}')
-    print(f'El peso aproximado de las obras a trasladar es{peso}')
-    print('Las cinco obras con el costo de translado más grande son:...\n')
-    f = 0
-    for i in lt.iterator(T5C1):
-        print(f"Title: {i['Title']} || Artist:  || 'Classification': {i['Classification']} || Date: {i['Date']} || Medium: {i['Medium']} || Dimensions: {i['Dimensions']} || Price: {t5C2[f]} ||\n")
-        print('Las cinco obras más antiguas a transladar son:...\n')
-    for i in lt.iterator(T5A1):
-        print(f"Title: {i['Title']} || Artist:  || 'Classification': {i['Classification']} || Date: {i['Date']} || Medium: {i['Medium']} || Dimensions: {i['Dimensions']} || Price: {t5C2[f]} ||\n")
-        f+=1
+    print(f'Hay {count} en el departamento {dep}.')
+    print(f'El costo total del traslado es {round(total_cost,2)}')
+    print(f'El peso aproximado de las obras a trasladar es {round(weight,2)} kg')
+    print('Las cinco obras con el costo de translado más grande son (de menor a mayor):...\n')
+    for i in lt.iterator(leaderboard):
+        print(f"Title: {i['Title']} || Artist -->")
+        for j in lt.iterator(i['Artists']):
+            print(j)
+        print(f"|| 'Classification': {i['Classification']} || Date: {i['Date']} || Medium: {i['Medium']} || Dimensions: {i['Dimensions']} || Price: {i['price']}\n")
+    print('Las cinco obras más antiguas a transladar son:...\n')
+    for i in lt.iterator(oldest):
+        print(f"Title: {i['Title']} || Artist -->")
+        for j in lt.iterator(i['Artists']):
+            print(j)
+        print(f"|| 'Classification': {i['Classification']} || Date: {i['Date']} || Medium: {i['Medium']} || Dimensions: {i['Dimensions']} || Price: {i['price']}\n")
+    print(f"\nTIME USED: {timef}")
     print('=======================================================================')
 
 def req6(catalog):

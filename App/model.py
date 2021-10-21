@@ -64,11 +64,12 @@ def initcatalog():
                                                      , TopMedium artworks : TAD LIST SORTED BY Date(ObjectID, Date), sorted : TAD LIST( Medium, count ) ) 
                                                          |||||    REQ 6,3,1
     catalog['artworks list'] : TAD LIST SORTED BY Date( ObjectID, Date, Title, Artists : TAD LIST(DisplayName), Classification, Medium,
-                                                 Dimensions, Depth (cm), Diameter (cm), Height (cm), Length (cm), Width (cm), Weight (kg) )     |||||    REQ 5
+                                                 Dimensions )     |||||    REQ 5
     catalog['artworks list 2'] : TAD LIST SORTED BY DateAcquired( ObjectID, ConstituentID, DateAcquired, CreditLine, Title, Artists : TAD LIST(DisplayName),
                                                                  Classification, Medium, Dimensions, Date )     |||||    REQ 2
     catalog['artworks map'] : TAD MAP(ObjectID --> ConstituentID, DateAcquired, CreditLine, Title, Artists : TAD LIST(DisplayName),
-                                                                 Classification, Medium, Dimensions, Date, Department)     |||||    REQ 6,3,1
+                                                                 Classification, Medium, Dimensions, Date, Department
+                                                                 , Depth (cm), Diameter (cm), Height (cm), Length (cm), Width (cm), Weight (kg))     |||||    REQ 6,3,1
     catalog['artists with ids'] : TAD MAP( ConstituentID : DisplayName )     |||||    REQ 5,2
     catalog['ids with artists'] : TAD MAP( DisplayName : ConstituentID )     |||||    REQ 5
     catalog['nationality map'] : TAD MAP(  Nationality -> nation, count, artworks : TAD LIST( ObjectID )  )
@@ -257,12 +258,6 @@ def infoartwork_list1(artwork):
     new['Classification'] = artwork['Classification']
     new['Medium'] = artwork['Medium']
     new['Dimensions'] = artwork['Dimensions']
-    new['Depth (cm)'] = artwork['Depth (cm)']
-    new['Weight (kg)'] = artwork['Weight (kg)']
-    new['Height (cm)'] = artwork['Height (cm)']
-    new['Length (cm)'] = artwork['Length (cm)']
-    new['Width (cm)'] = artwork['Width (cm)']
-    new['Diameter (cm)'] = artwork['Diameter (cm)']
     keys = new.keys()
     for i in keys:
         if new[i] == '' or new[i] == ' ':
@@ -282,6 +277,12 @@ def infoartwork_list2(artwork):
     new['Dimensions'] = artwork['Dimensions']
     new['Date'] = artwork['Date']
     new['Department'] = artwork['Department']
+    new['Depth (cm)'] = artwork['Depth (cm)']
+    new['Weight (kg)'] = artwork['Weight (kg)']
+    new['Height (cm)'] = artwork['Height (cm)']
+    new['Length (cm)'] = artwork['Length (cm)']
+    new['Width (cm)'] = artwork['Width (cm)']
+    new['Diameter (cm)'] = artwork['Diameter (cm)']
     keys = new.keys()
     for i in keys:
         if new[i] == '' or new[i] == ' ':
@@ -323,23 +324,6 @@ def infoartist_map(artist):
     return new
 
 # Funciones de consulta
-
-def lab5(catalog,medium,n):
-    target = me.getValue(mp.get(catalog['Mediums'],medium))
-    lst = target['Artworks']
-    count = target['count']
-    if n > lt.size(lst):
-        return lst,count
-    artworks = lt.subList(lst,1,n)
-    return artworks,count
-
-def lab6(catalog,nation):
-    try:
-        target = me.getValue(mp.get(catalog['nationality'],nation))
-        lst = target['artworks']
-        return lt.size(lst)
-    except:
-        return None
 
 def req1(catalog,yi:int,yf:int):
     count = 0
@@ -383,8 +367,51 @@ def req1(catalog,yi:int,yf:int):
     return lst,count
     # END
 
-def req2():
-    pass
+def req2(catalog, di:datetime, df:datetime):
+    count = 0
+    last1 = None # [-1]
+    last2 = None # [-2]
+    last3 = None # [-3]
+    size = 0
+    lst = lt.newList(datastructure='SINGLE_LINKED')
+    co = 0
+    ad = 'Purchase'
+    for i in lt.iterator(catalog['artworks list 2']): # O(n)
+        if i['DateAcquired'] != 'NOT IDENTIFIED' and i['DateAcquired'].strip() != '':
+            a = datetime.date.fromisoformat(i['DateAcquired'].strip())
+            if a >= di and a <= df:
+                # ADD COUNT
+                count += 1
+                # ADD FIRST 3 -- O(1)
+                if size < 3:
+                    lt.addLast(lst,me.getValue(mp.get(catalog['artworks map'],i['ObjectID'])))
+                    size += 1
+                # CHECK IF EMPTY FOR THE LAST 3 -- THIS WILL CONTINUE LOOP -- O(1) FOR EACH
+                if last3 == None:
+                    last3 = me.getValue(mp.get(catalog['artworks map'],i['ObjectID']))
+                    continue
+                elif last2 == None:
+                    last2 = me.getValue(mp.get(catalog['artworks map'],i['ObjectID']))
+                    continue
+                elif last1 == None:
+                    last1 = me.getValue(mp.get(catalog['artworks map'],i['ObjectID']))
+                    continue
+                # CHECK FOR NEW LAST AND REPLACE CURRENT ONES -- O(1) FOR EACH
+                if last1!=None and last2!=None and last1!=None:
+                    last3 = last2
+                    last2 = last1
+                    last1 = me.getValue(mp.get(catalog['artworks map'],i['ObjectID']))
+        if (i['CreditLine'] != 'NOT IDENTIFIED')&(i['CreditLine'].strip()==ad):
+          co +=1
+    # ADD LAST 3 -- O(1) FOR EACH
+    if last3 != None:
+        lt.addLast(lst,last3)
+    if last2 != None:
+        lt.addLast(lst,last2) 
+    if last1 != None:
+        lt.addLast(lst,last1)
+    return lst,count,co
+    # END
 
 def req3(catalog, name):
     try:
@@ -421,258 +448,108 @@ def req3(catalog, name):
     except:
         return None
 
-def req4():
-    pass
+def req4(catalog):
 
-def req5(catalog,dep):
-  list = lt.newList(datastructure='ARRAY_LIST')
-  for i in lt.iterator(catalog['artworks list']): # O(n)
-    if dep==i['Department'].strip():
-      lt.addLast(list, i) # O(1)
-  rate = 72
-  pi = 3.141592
-  priceStandard = 48
-  highest = 0
-  area = 0
-  volumen = 0 
-  peso = 0
-  precios = []
-  total = 0
-  top5A1 = []
-  top5A2 = []
-  top5C1= [] #Arreglo de obras mas costosas
-  top5C2 = [] #Arreglo con el precio de las obras
-  pesot = 0
-  j=0
-  for i in lt.iterator(list):
-    precioi = 0
-    a = i['Weight (kg)']
-    b = i['Depth (cm)']
-    c = i['Height (cm)']
-    d = i['Length (cm)']
-    e = i['Width (cm)']
-    f = i['Diameter (cm)']
-    abool,bbool,cbool,dbool,ebool,fbool = False,False,False,False,False,False
-    if a != '':
-      a = float(a)
-      abool = True
-    elif b != '':
-      b = float(b)
-      bbool = True
-    if c != '':
-      c = float(c)
-      cbool = True
-    if d != '':
-      d = float(d)
-      dbool = True
-    if e != '':
-      e = float(e)
-      ebool = True
-    if f != '':
-      f = float(f)
-      fbool = True
-    
+        new =lt.newList(datastructure='SINGLE_LINKED')
+        for i in lt.iterator(catalog['nationality list']):
+            lt.addLast(new, i['nation'])
+        new2 =lt.newList(datastructure='SINGLE_LINKED')
+        count = 0
+        for i in lt.iterator(catalog['nationality list']):
+            if int(i['count'])>count:
+                last3 = me.getValue(mp.get(catalog['nationality map'], i['artworks']))
+                last2 = me.getValue(mp.get(catalog['nationality map'], i['artworks']))
+                last1 = me.getValue(mp.get(catalog['nationality map'], i['artworks']))
+                first = me.getValue(mp.get(catalog['nationality map'], i['artworks']))
+                second = me.getValue(mp.get(catalog['nationality map'], i['artworks']))
+                third = me.getValue(mp.get(catalog['nationality map'], i['artworks']))
+                lt.addLast(new2,first)
+                lt.addLast(new2,second)
+                lt.addLast(new2,third)
+                lt.addLast(new2,last3)
+                lt.addLast(new2,last2)
+                lt.addLast(new2,last1)
+                count=int(i['count'])
+        return (new, new2)
 
-    if abool:
-      peso = a
-      pesot +=peso
-    
-    areal = []
-    if bbool and cbool:
-      areal.append(b*c*rate)
-    if bbool and dbool:
-      areal.append(b*d*rate)
-    if bbool and ebool:
-      areal.append(b*e*rate)
-    if cbool and dbool:
-      areal.append(c*d*rate)
-    if cbool and ebool:
-      areal.append(c*e*rate)
-    if dbool and ebool:
-      areal.append(d*e*rate)
-    if fbool:
-      areal.append(pi*((f/2)*(f/2))*rate)
-    
-
-    if len(areal) > 1:
-      area = max(areal)
-    elif len(areal) < 1 and len(areal) != 0:
-      area = areal[0]
-    
-    if bbool and cbool and dbool:
-      volumen = b*c*d*rate
-    elif bbool and cbool and ebool:
-      volumen = b*c*e*rate
-    elif bbool and dbool and ebool:
-      volumen = b*d*e*rate
-    elif cbool and dbool and ebool:
-      volumen = c*d*e*rate
-    ######
-    if area != 0:
-      precios.append(area)
-    if volumen != 0:
-      precios.append(volumen)
-    if peso != 0:
-      precios.append(peso*rate)
-    ################
-    if len(precios) == 0:
-      highest = priceStandard
-      precioi = priceStandard
-    else:
-      for i in precios:
-        if i > highest:
-          highest = i
-          precioi = i
+def req5(catalog,d):
+    count = 0 
+    weight = 0
+    # ADD ARTWORKS ELEMENTS TO NEW LST
+    artworks = lt.newList(datastructure='ARRAY_LIST')
+    for i in lt.iterator(catalog['artworks list']):
+        got = me.getValue(mp.get(catalog['artworks map'],i['ObjectID']))
+        if got['Department'] == d:
+            try:
+                weight += float(got['Weight (kg)'].strip())
+            except:
+                pass
+            count += 1
+            lt.addLast(artworks,got)
+    # GET PRICE OF ARTWORKS AND LEADERBOARD
+    total_cost = 0
+    leaderboard = lt.newList(datastructure='SINGLE_LINKED')
+    big = 0
+    for j in lt.iterator(artworks): # O(n)
+        # O(1) FOR EACH
+        collection = helperREQ5(j)
+        area = collection[0]
+        volumen = collection[1]
+        try:
+            peso = float(j['Weight (kg)'].strip())
+        except:
+            peso = 0
+        price = max(area*72.00,volumen*72.00,peso*72.00,48)
+        j['price'] = price
+        total_cost+=price
+        # ADD TO LEADERBOARD
+        if lt.size(leaderboard) < 5:
+            lt.addLast(leaderboard,j)
         else:
-          precioi = max(precios)
-    total += precioi
-
-    while j<5:
-      top5A1.append(i)
-      top5A2.append(precioi)
-    
-    if top5C1.size()>0:
-      #Arreglo lleno
-      if top5C1.size()==5:
-        if top5C2[4]<precioi:
-          if top5C2[3]<precioi:
-            if top5C2[2]<precioi:
-              if top5C2[1]<precioi:
-                if top5C2[0]<precioi:
-                  top5C2[4]=top5C2[3]
-                  top5C1[4]=top5C1[3]
-                  top5C2[3]=top5C2[2]
-                  top5C1[3]=top5C1[2]
-                  top5C2[2]=top5C2[1]
-                  top5C1[2]=top5C1[1]
-                  top5C2[1]=top5C2[0]
-                  top5C1[1]=top5C1[0]
-                  top5C2[0]=precioi
-                  top5C1[0]= i
+            if price > big:
+                big = price
+                if lt.size(leaderboard) == 5:
+                    lt.addLast(leaderboard,j)
+                    lt.removeFirst(leaderboard)
                 else:
-                  top5C2[4]=top5C2[3]
-                  top5C1[4]=top5C1[3]
-                  top5C2[3]=top5C2[2]
-                  top5C1[3]=top5C1[2]
-                  top5C2[2]=top5C2[1]
-                  top5C1[2]=top5C1[1]
-                  top5C2[1]=precioi
-                  top5C1[1]=i
-              else: 
-                top5C2[4]=top5C2[3]
-                top5C1[4]=top5C1[3]
-                top5C2[3]=top5C2[2]
-                top5C1[3]=top5C1[2]
-                top5C2[2]=precioi
-                top5C1[2]=i
-            else:
-              top5C2[4]=top5C2[3]
-              top5C1[4]=top5C1[3]
-              top5C2[3]=precioi
-              top5C1[3]=i
-          else:
-            top5C2[4]=precioi
-            top5C1[4]=i
-      else:
-        #Arreglo con 4 elementos
-        if top5C1.size()==4:
-          if top5C2[3]<precioi:
-            if top5C2[2]<precioi:
-              if top5C2[1]<precioi:
-                if top5C2[0]<precioi:
-                  top5C2.append(top5C2[3])
-                  top5C1.append(top5C1[3])
-                  top5C2[3]=top5C2[2]
-                  top5C1[3]=top5C1[2]
-                  top5C2[2]=top5C2[1]
-                  top5C1[2]=top5C1[1]
-                  top5C2[1]=top5C2[0]
-                  top5C1[1]=top5C1[0]
-                  top5C2[0]=precioi
-                  top5C1[0]= i
-                else:
-                  top5C2.append(top5C2[3])
-                  top5C1.append(top5C1[3])
-                  top5C2[3]=top5C2[2]
-                  top5C1[3]=top5C1[2]
-                  top5C2[2]=top5C2[1]
-                  top5C1[2]=top5C1[1]
-                  top5C2[1]=precioi
-                  top5C1[1]=i
-              else:
-                top5C2.append(top5C2[3])
-                top5C1.append(top5C1[3])
-                top5C2[3]=top5C2[2]
-                top5C1[3]=top5C1[2]
-                top5C2[2]=precioi
-                top5C1[2]=i
-            else:
-              top5C2.append(top5C2[3])
-              top5C1.append(top5C1[3])
-              top5C2[3]=precioi
-              top5C1[3]=i
-          else:
-            top5C2.append(precioi)
-            top5C1.append(i)
-        if top5C1.size()==3:
-          if top5C2[2]<precioi:
-            if top5C2[1]<precioi:
-              if top5C2[0]<precioi:
-                top5C2.append(top5C2[2])
-                top5C1.append(top5C1[2])
-                top5C2[2]=top5C2[1]
-                top5C1[2]=top5C1[1]
-                top5C2[1]=top5C2[0]
-                top5C1[1]=top5C1[0]
-                top5C2[0]=precioi
-                top5C1[0]= i
-              else:
-                top5C2.append(top5C2[2])
-                top5C1.append(top5C1[2])
-                top5C2[2]=top5C2[1]
-                top5C1[2]=top5C1[1]
-                top5C2[1]=precioi
-                top5C1[1]=i
-            else:
-              top5C2.append(top5C2[2])
-              top5C1.append(top5C1[2])
-              top5C2[2]=precioi
-              top5C1[2]=i
-          else:
-            top5C2.append(precioi)
-            top5C1.append(i)
-        if top5C1.size()==2:
-          if top5C2[1]<precioi:
-            if top5C2[0]<precioi:
-              top5C2.append(top5C2[1])
-              top5C1.append(top5C1[1])
-              top5C2[1]=top5C2[0]
-              top5C1[1]=top5C1[0]
-              top5C2[0]=precioi
-              top5C1[0]= i
-            else:
-              top5C2.append(top5C2[1])
-              top5C1.append(top5C1[1])
-              top5C2[1]=precioi
-              top5C1[1]=i
-          else:
-            top5C2.append(precioi)
-            top5C1.append(i)
-        if top5C1.size()==1:
-          if top5C2[0]<precioi:
-            top5C2.append(top5C2[0])
-            top5C1.append(top5C1[0])
-            top5C2[0]=precioi
-            top5C1[0] = i
-          else:
-            top5C2.append(precioi)
-            top5C1.append(i)
-        if top5C1.size() == 0:
-          top5C2.append(precioi)
-          top5C1.append(i)
-  j+=1
-  return list.size(), total, pesot, top5A1, top5A2, top5C1, top5C2
+                    lt.addLast(leaderboard,j)
+    # TOP 5 OLDEST ARTWORKS
+    oldest = lt.subList(artworks,1,5)
+    # WE HAVE: TOTAL PRICE, TOTAL WEIGHT, TOTAL ARTWORKS, TOP 5 PRICE, TOP OLDEST ARTWORKS
+    return total_cost,weight,count,leaderboard,oldest
+    # END
 
+def helperREQ5(artwork):
+    # GET AREA AND VOLUME
+    height_str = artwork['Height (cm)'].strip()
+    depth_str = artwork['Depth (cm)'].strip()
+    length_str = artwork['Length (cm)'].strip()
+    width_str = artwork['Width (cm)'].strip()
+    diameter_str = artwork['Diameter (cm)'].strip()
+    if diameter_str != '' and diameter_str != 'NOT IDENTIFIED':
+        return 0,0
+    # KEEP THE HIGHEST VALUES
+    try:
+        h = float(height_str)
+    except:
+        h = 0
+    try:
+        d = float(depth_str)
+    except:
+        d = 0
+    try:
+        l = float(length_str)
+    except:
+        l = 0
+    try:
+        w = float(width_str)
+    except:
+        w = 0
+    #print(f"h = {h}, d = {d}, l = {l}, w = {w}")
+    area = max(h*d,h*l,h*w,d*l,d*w,l*w)
+    volumen = max(h*d*l,h*d*w,h*l*w,d*l*w)
+    return area,volumen
+    # END
 
 def req6(catalog,yi,yf,n):
     count = 0
@@ -763,6 +640,7 @@ def helperREQ6(catalog,best):
         got = me.getValue(mp.get(catalog['artworks map'],artid)) # O(1)
         lt.addLast(artworks,got) # O(1)
         count += 1
+    return artworks
     # END
 
 # Funciones utilizadas para comparar elementos dentro de una lista
