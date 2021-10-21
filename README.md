@@ -17,3 +17,4 @@ Este directorio contiene todo el código de base que se entrega para el funciona
 Este directorio contiene las pruebas realizadas a los TADs, Estructuras de Datos y Algoritmos.
 
 1. Ronald Yesid Diaz Pardo - 202111309 - r.diazp - requisito 3
+2. Juan Andrés Ruiz Uribe - 201914351 - ja.ruizu@uniandes.edu.co - requisito 4
