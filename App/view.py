@@ -76,7 +76,10 @@ def req1(catalog):
     except:
         print('Introduce el año en un formato valido (yyyy).')
         return
+    start_time = time.process_time()
     collection = controller.req1(catalog,yi,yf)
+    stop_time = time.process_time()
+    timef = (stop_time - start_time)*1000
     count = collection[1]
     lst = collection[0]
     print('============================ REQ #1 Answer ============================')
@@ -84,6 +87,7 @@ def req1(catalog):
     print('The first and last 3 born in range are...\n')
     for i in lt.iterator(lst):
         print(f"DisplayName: {i['DisplayName']} || BeginDate: {i['BeginDate']} || EndDate: {i['EndDate']} || Nationality: {i['Nationality']} || Gender: {i['Gender']}\n")
+    print(f"\nTIME USED: {timef}")
     print('=======================================================================')
 
 def req2(catalog):
@@ -91,8 +95,14 @@ def req2(catalog):
 
 def req3(catalog):
     # Louise Bourgeois
-    artist = input('Name of the artistt?\n').strip()
+    artist = input('Name of the artist?\n').strip()
+    start_time = time.process_time()
     collection = controller.req3(catalog,artist)
+    stop_time = time.process_time()
+    timef = (stop_time - start_time)*1000
+    if collection == None:
+        print('Ese artista existe en otra dimension.')
+        return
     target = collection[0]
     id = collection[1]
     lst = collection[2]
@@ -107,13 +117,37 @@ def req3(catalog):
     print('Artworks of best medium ->\n')
     for j in lt.iterator(lst):
         print(f"Title: {j['Title']} || Date: {j['Date']} || Medium: {j['Medium'].strip()} || Dimensions: {j['Dimensions']}\n")
+    print(f"\nTIME USED: {timef}")
     print('=======================================================================')
 
 def req4(catalog):
     pass
 
 def req5(catalog):
-    pass
+    # Drawings & Prints
+    dep = str(input('Departamento a Transferir:?\n'))
+    collection = controller.req5(catalog, dep)
+    #list.size(), total, pesot, top5A1, top5A2, top5C1, top5C2
+    nObras = collection[0]
+    costo = collection[1]
+    peso = collection[2]
+    T5A1 = collection[3]
+    t5A2 = collection[4]
+    T5C1 = collection[5]
+    t5C2 = collection[6]
+    print('============================ REQ #5 Answer ============================')
+    print(f'Hay {nObras} en el departamento {dep}.')
+    print(f'El costo total del traslado es{costo}')
+    print(f'El peso aproximado de las obras a trasladar es{peso}')
+    print('Las cinco obras con el costo de translado más grande son:...\n')
+    f = 0
+    for i in lt.iterator(T5C1):
+        print(f"Title: {i['Title']} || Artist:  || 'Classification': {i['Classification']} || Date: {i['Date']} || Medium: {i['Medium']} || Dimensions: {i['Dimensions']} || Price: {t5C2[f]} ||\n")
+        print('Las cinco obras más antiguas a transladar son:...\n')
+    for i in lt.iterator(T5A1):
+        print(f"Title: {i['Title']} || Artist:  || 'Classification': {i['Classification']} || Date: {i['Date']} || Medium: {i['Medium']} || Dimensions: {i['Dimensions']} || Price: {t5C2[f]} ||\n")
+        f+=1
+    print('=======================================================================')
 
 def req6(catalog):
     # n = 7
@@ -125,7 +159,10 @@ def req6(catalog):
     except:
         print('Introduce el año en un formato valido (yyyy).')
         return
+    start_time = time.process_time()
     collection = controller.req6(catalog,yi,yf,n) # return lst,best,artworks
+    stop_time = time.process_time()
+    timef = (stop_time - start_time)*1000
     lst = collection[0]
     best = collection[1]
     artworks = collection[2]
@@ -138,36 +175,8 @@ def req6(catalog):
     for j in lt.iterator(artworks):
         print(f"Title: {j['Title']} || Date: {j['Date']} || DateAcquired: {j['DateAcquired']} || Medium: {j['Medium'].strip()} ||") 
         print(f"|| Departmment: {j['Department']} || Classification: {j['Classification']} || Dimensions: {j['Dimensions']}\n")
+    print(f"\nTIME USED: {timef}")
     print('=======================================================================')
-
-def lab5(catalog):
-  start_time = time.process_time()
-  medium = input('Medio?\n').strip()
-  n = int(input('Cuantas obras?\n').strip())
-  collection = controller.lab5(catalog,medium,n)   # Returns (TAD LIST,int)
-  artworks = collection[0]
-  count = collection[1] 
-  print(f'\nSe encontraron {count} obras en el medio {medium}.')
-  for i in lt.iterator(artworks):
-      print(f"ObjectID = {i['ObjectID']} || Date = {i['Date']}")
-  print('\n')
-  stop_time = time.process_time()
-  elapsed_time_mseg = (stop_time - start_time)*1000
-  print(f"TIME : {elapsed_time_mseg}")
-  # END
-
-def lab6(catalog):
-  start_time = time.process_time()
-  nation = input('Nacionalidad?\n').strip()
-  count = controller.lab6(catalog,nation)
-  if count == None:
-      print('\nDesafortunadamente no se encontro esa nacionalidad.\n')
-      return
-  print(f'\nSe encontraron {count} obras con la nacionalidad dada.\n')
-  stop_time = time.process_time()
-  elapsed_time_mseg = (stop_time - start_time)*1000
-  print(f"TIME : {elapsed_time_mseg}")
-  # END
 
 """
 Menu principal
@@ -183,7 +192,7 @@ while True:
     if option == 1:
         req1(catalog)
     elif option == 2:
-        req1(catalog)
+        req2(catalog)
     elif option == 3:
         req3(catalog)
     elif option == 4:
@@ -192,10 +201,7 @@ while True:
         req5(catalog)
     elif option == 6:
         req6(catalog)
-    elif option == 7:
-        lab6(catalog)
-    elif option == 8:
-        lab6(catalog)
     else:
         sys.exit(0)
+    input('Introduce cualquier tecla para continuar...')
 #sys.exit(0)

@@ -27,8 +27,6 @@
 import datetime
 import sys
 import time
-from DISClib.DataStructures.arraylist import iterator
-from DISClib.DataStructures.chaininghashtable import get
 import config as cf
 from DISClib.ADT import list as lt
 from DISClib.ADT import map as mp
@@ -56,9 +54,8 @@ def initcatalog():
     catalog['artworks map'] = mp.newMap(150681,maptype='PROBING',loadfactor=0.5)  
     catalog['artists with ids'] = mp.newMap(15224,maptype='CHAINING',loadfactor=4) 
     catalog['ids with artists'] = mp.newMap(15224,maptype='CHAINING',loadfactor=4) 
-    catalog['Mediums'] = mp.newMap(21251,maptype='CHAINING',loadfactor=4)
-    catalog['Mediums list'] = lt.newList(datastructure='ARRAY_LIST')
-    catalog['nationality'] = mp.newMap(64570,maptype='CHAINING',loadfactor=4) 
+    catalog['nationality map'] = mp.newMap(64570,maptype='CHAINING',loadfactor=4) 
+    catalog['nationality list'] = lt.newList(datastructure='ARRAY_LIST')
 
     """
     METHOD 1  -----  Currently using  -----  
@@ -74,9 +71,8 @@ def initcatalog():
                                                                  Classification, Medium, Dimensions, Date, Department)     |||||    REQ 6,3,1
     catalog['artists with ids'] : TAD MAP( ConstituentID : DisplayName )     |||||    REQ 5,2
     catalog['ids with artists'] : TAD MAP( DisplayName : ConstituentID )     |||||    REQ 5
-    catalog['Mediums'] : TAD MAP(  Medium -> count, Artworks : TAD LIST SORTED BY Date(ObjectID, Date)  )
-    catalog['Mediums list'] : TAD LIST(  Medium  )
-    catalog['nationality'] : TAD MAP(  Nationality -> artworks : TAD LIST( ObjectID )  )
+    catalog['nationality map'] : TAD MAP(  Nationality -> nation, count, artworks : TAD LIST( ObjectID )  )
+    catalog['nationality list'] : TAD LIST SORTED BY count(  Nation, artworks : TAD LIST( ObjectID ), count  )
     """
     return catalog
 
@@ -86,35 +82,33 @@ def sortData(catalog):
     # Sort catalog['artists list'] by BeginDate (YYYY)
     cmp = cmpBeginDate
     lst = catalog['artists list']
-    quicksorting(lst,cmp)
+    mergesorting(lst,cmp)
     # Sort the key   'TopMedium artworks'  : catalog['artists map'] ---> (key = 'TopMedium artworks)' ; by Date for each artist
     for i in lt.iterator(catalog['artists list']):
         cmp = cmpDate
         key = i['ConstituentID']
         person = me.getValue(mp.get(catalog['artists map'],key))
         lst = person['TopMedium artworks']
-        quicksorting(lst,cmp)
+        mergesorting(lst,cmp)
         # EXTRA
         addArtist_sorted(catalog,key)
         cmp = cmpCount
         lst = person['sorted']
-        quicksorting(lst,cmp)
-    
+        mergesorting(lst,cmp)
     # Sort catalog['artworks list'] by Date
     cmp = cmpDate
     lst = catalog['artworks list']
-    quicksorting(lst,cmp) 
+    mergesorting(lst,cmp) 
     # Sort catalog['artworks list 2'] by DateAcquired
     cmp = cmpDateAcquired
     lst = catalog['artworks list 2']
-    quicksorting(lst,cmp) 
-    # Sort 'Artworks' key for each catalog['Mediums'] element in catalog
-    cmp = cmpDate
-    for i in lt.iterator(catalog['Mediums list']):
-        target = me.getValue(mp.get(catalog['Mediums'],i))
-        lst = target['Artworks']
-        quicksorting(lst,cmp)
-    # Sort catalog['artists mediums']
+    mergesorting(lst,cmp) 
+    # Sort catalog['nationality list']
+    keys = mp.keySet(catalog['nationality map'])
+    for i in lt.iterator(keys):
+        lt.addLast(catalog['nationality list'],me.getValue(mp.get(catalog['nationality map'],i)))
+    cmp = cmpNationality
+    mergesorting(catalog['nationality list'],cmp)
     # END
 
 def addArtist_sorted(catalog,id):
@@ -137,13 +131,23 @@ def addArtwork(catalog,artwork):
         addArtworkArtists(catalog,names,i)
         # nationality
         nation = me.getValue(mp.get(catalog['artists map'],i))['Nationality']
-        if mp.contains(catalog['nationality'],nation):
-            target = me.getValue(mp.get(catalog['nationality'],nation))
-            lt.addLast(target['artworks'],artwork['ObjectID'])
-        else:
+        arttoadd = infoartwork_list1(artwork)
+        arttoadd['Artists'] = names
+        try:
+            # THIS NATION OBJECT WAS ALREADY CREATED IN addArtist() IF IT GOES THROUGH HERE
+            target = me.getValue(mp.get(catalog['nationality map'],nation))
+            target['count']+=1
+            #print(f"\nNATION: {target['nation']} || COUNT: {target['count']}\n")
+            lt.addLast(target['artworks'],arttoadd)
+        except:
+            # THIS NATION OBJECT WAS NOT CREATED IN addArtist() IF IT GOES THROUGH HERE
+            # THIS WON'T HAPPEN MANY TIMES, JUST A FEW TIMES WITH LARGE FILE
             new = {}
+            new['nation'] = nation
+            new['count'] = 1
             new['artworks'] = lt.newList(datastructure='ARRAY_LIST')
-            mp.put(catalog['nationality'],nation,new)
+            lt.addLast(new['artworks'],arttoadd)
+            mp.put(catalog['nationality map'],nation,new)
     new1['Artists'] = names
     new2['Artists'] = names
     # Artworks Lists
@@ -151,23 +155,6 @@ def addArtwork(catalog,artwork):
     lt.addLast(catalog['artworks list 2'],new2)
     # Artworks map
     mp.put(catalog['artworks map'],artwork['ObjectID'],new2)
-    # Mediums map
-    if artwork['Medium'] != '' or artwork['Medium'] != ' ':
-        if not mp.contains(catalog['Mediums'],artwork['Medium']):
-            lt.addLast(catalog['Mediums list'],artwork['Medium'])
-            new = infoMediums()
-            mp.put(catalog['Mediums'],artwork['Medium'],new)
-        target = me.getValue(mp.get(catalog['Mediums'],artwork['Medium']))
-        target['count'] += 1
-        new = {}
-        new['ObjectID'] = artwork['ObjectID']
-        new['Date'] = artwork['Date']
-        keys = new.keys()
-        for i in keys:
-            if new[i] == '':
-                new[i] = 'NOT IDENTIFIED'
-        lt.addLast(target['Artworks'],new)
-    # Nationality map
     # END
 
 def addArtist(catalog,artist):
@@ -182,8 +169,12 @@ def addArtist(catalog,artist):
     # Nationality
     nation = artist['Nationality'].strip()
     new = {}
+    if nation == '':
+        nation = 'NOT IDENTIFIED'
+    new['nation'] = nation
+    new['count'] = 0
     new['artworks'] = lt.newList(datastructure='ARRAY_LIST')
-    mp.put(catalog['nationality'],nation,new)
+    mp.put(catalog['nationality map'],nation,new)
     # END
 
 def addArtist_id(catalog,artist):
@@ -396,42 +387,292 @@ def req2():
     pass
 
 def req3(catalog, name):
-    # GET DEFAULTS ---- O(1) FOR EACH
-    id = me.getValue(mp.get(catalog['ids with artists'],name))
-    target = me.getValue(mp.get(catalog['artists map'],id))
-    new = lt.newList(datastructure='SINGLE_LINKED') # ADDING LAST IS O(1) FOR LINKED LIST
-    lst = target['TopMedium artworks'] # ARRAY_LIST
-    size = lt.size(lst)
-    # GET ELEMENTS
-    if size > 6:
-        # O(1) FOR EACH
-        last3  = me.getValue(mp.get(catalog['artworks map'], lt.getElement(lst,size-2)['ObjectID']))
-        last2 = me.getValue(mp.get(catalog['artworks map'], lt.getElement(lst,size-1)['ObjectID']))
-        last1 = me.getValue(mp.get(catalog['artworks map'], lt.getElement(lst,size)['ObjectID']))
-        first = me.getValue(mp.get(catalog['artworks map'], lt.getElement(lst,1)['ObjectID']))
-        second = me.getValue(mp.get(catalog['artworks map'], lt.getElement(lst,2)['ObjectID']))
-        third = me.getValue(mp.get(catalog['artworks map'], lt.getElement(lst,3)['ObjectID']))
-        # ADD ELEMENT -- O(1) FOR EACH
-        lt.addLast(new,first)
-        lt.addLast(new,second)
-        lt.addLast(new,third)
-        lt.addLast(new,last3)
-        lt.addLast(new,last2)
-        lt.addLast(new,last1)
-    else:
-        # LOOP OF <=6 ELEMENTS -- O(1)
-        for i in lt.iterator(lst):
-            got = me.getValue(mp.get(catalog['artworks map'], i['ObjectID']))
-            lt.addLast(new,got)
-    # GET MEDIUMS AND THEIR COUNTS -- O(1)
-    meds = target['sorted']
-    return target,id,new,meds
+    try:
+        # GET DEFAULTS ---- O(1) FOR EACH
+        id = me.getValue(mp.get(catalog['ids with artists'],name))
+        target = me.getValue(mp.get(catalog['artists map'],id))
+        new = lt.newList(datastructure='SINGLE_LINKED') # ADDING LAST IS O(1) FOR LINKED LIST
+        lst = target['TopMedium artworks'] # ARRAY_LIST
+        size = lt.size(lst)
+        # GET ELEMENTS
+        if size > 6:
+            # O(1) FOR EACH
+            last3  = me.getValue(mp.get(catalog['artworks map'], lt.getElement(lst,size-2)['ObjectID']))
+            last2 = me.getValue(mp.get(catalog['artworks map'], lt.getElement(lst,size-1)['ObjectID']))
+            last1 = me.getValue(mp.get(catalog['artworks map'], lt.getElement(lst,size)['ObjectID']))
+            first = me.getValue(mp.get(catalog['artworks map'], lt.getElement(lst,1)['ObjectID']))
+            second = me.getValue(mp.get(catalog['artworks map'], lt.getElement(lst,2)['ObjectID']))
+            third = me.getValue(mp.get(catalog['artworks map'], lt.getElement(lst,3)['ObjectID']))
+            # ADD ELEMENT -- O(1) FOR EACH
+            lt.addLast(new,first)
+            lt.addLast(new,second)
+            lt.addLast(new,third)
+            lt.addLast(new,last3)
+            lt.addLast(new,last2)
+            lt.addLast(new,last1)
+        else:
+            # LOOP OF <=6 ELEMENTS -- O(1)
+            for i in lt.iterator(lst):
+                got = me.getValue(mp.get(catalog['artworks map'], i['ObjectID']))
+                lt.addLast(new,got)
+        # GET MEDIUMS AND THEIR COUNTS -- O(1)
+        meds = target['sorted']
+        return target,id,new,meds
+    except:
+        return None
 
 def req4():
     pass
 
-def req5():
-    pass
+def req5(catalog,dep):
+  list = lt.newList(datastructure='ARRAY_LIST')
+  for i in lt.iterator(catalog['artworks list']): # O(n)
+    if dep==i['Department'].strip():
+      lt.addLast(list, i) # O(1)
+  rate = 72
+  pi = 3.141592
+  priceStandard = 48
+  highest = 0
+  area = 0
+  volumen = 0 
+  peso = 0
+  precios = []
+  total = 0
+  top5A1 = []
+  top5A2 = []
+  top5C1= [] #Arreglo de obras mas costosas
+  top5C2 = [] #Arreglo con el precio de las obras
+  pesot = 0
+  j=0
+  for i in lt.iterator(list):
+    precioi = 0
+    a = i['Weight (kg)']
+    b = i['Depth (cm)']
+    c = i['Height (cm)']
+    d = i['Length (cm)']
+    e = i['Width (cm)']
+    f = i['Diameter (cm)']
+    abool,bbool,cbool,dbool,ebool,fbool = False,False,False,False,False,False
+    if a != '':
+      a = float(a)
+      abool = True
+    elif b != '':
+      b = float(b)
+      bbool = True
+    if c != '':
+      c = float(c)
+      cbool = True
+    if d != '':
+      d = float(d)
+      dbool = True
+    if e != '':
+      e = float(e)
+      ebool = True
+    if f != '':
+      f = float(f)
+      fbool = True
+    
+
+    if abool:
+      peso = a
+      pesot +=peso
+    
+    areal = []
+    if bbool and cbool:
+      areal.append(b*c*rate)
+    if bbool and dbool:
+      areal.append(b*d*rate)
+    if bbool and ebool:
+      areal.append(b*e*rate)
+    if cbool and dbool:
+      areal.append(c*d*rate)
+    if cbool and ebool:
+      areal.append(c*e*rate)
+    if dbool and ebool:
+      areal.append(d*e*rate)
+    if fbool:
+      areal.append(pi*((f/2)*(f/2))*rate)
+    
+
+    if len(areal) > 1:
+      area = max(areal)
+    elif len(areal) < 1 and len(areal) != 0:
+      area = areal[0]
+    
+    if bbool and cbool and dbool:
+      volumen = b*c*d*rate
+    elif bbool and cbool and ebool:
+      volumen = b*c*e*rate
+    elif bbool and dbool and ebool:
+      volumen = b*d*e*rate
+    elif cbool and dbool and ebool:
+      volumen = c*d*e*rate
+    ######
+    if area != 0:
+      precios.append(area)
+    if volumen != 0:
+      precios.append(volumen)
+    if peso != 0:
+      precios.append(peso*rate)
+    ################
+    if len(precios) == 0:
+      highest = priceStandard
+      precioi = priceStandard
+    else:
+      for i in precios:
+        if i > highest:
+          highest = i
+          precioi = i
+        else:
+          precioi = max(precios)
+    total += precioi
+
+    while j<5:
+      top5A1.append(i)
+      top5A2.append(precioi)
+    
+    if top5C1.size()>0:
+      #Arreglo lleno
+      if top5C1.size()==5:
+        if top5C2[4]<precioi:
+          if top5C2[3]<precioi:
+            if top5C2[2]<precioi:
+              if top5C2[1]<precioi:
+                if top5C2[0]<precioi:
+                  top5C2[4]=top5C2[3]
+                  top5C1[4]=top5C1[3]
+                  top5C2[3]=top5C2[2]
+                  top5C1[3]=top5C1[2]
+                  top5C2[2]=top5C2[1]
+                  top5C1[2]=top5C1[1]
+                  top5C2[1]=top5C2[0]
+                  top5C1[1]=top5C1[0]
+                  top5C2[0]=precioi
+                  top5C1[0]= i
+                else:
+                  top5C2[4]=top5C2[3]
+                  top5C1[4]=top5C1[3]
+                  top5C2[3]=top5C2[2]
+                  top5C1[3]=top5C1[2]
+                  top5C2[2]=top5C2[1]
+                  top5C1[2]=top5C1[1]
+                  top5C2[1]=precioi
+                  top5C1[1]=i
+              else: 
+                top5C2[4]=top5C2[3]
+                top5C1[4]=top5C1[3]
+                top5C2[3]=top5C2[2]
+                top5C1[3]=top5C1[2]
+                top5C2[2]=precioi
+                top5C1[2]=i
+            else:
+              top5C2[4]=top5C2[3]
+              top5C1[4]=top5C1[3]
+              top5C2[3]=precioi
+              top5C1[3]=i
+          else:
+            top5C2[4]=precioi
+            top5C1[4]=i
+      else:
+        #Arreglo con 4 elementos
+        if top5C1.size()==4:
+          if top5C2[3]<precioi:
+            if top5C2[2]<precioi:
+              if top5C2[1]<precioi:
+                if top5C2[0]<precioi:
+                  top5C2.append(top5C2[3])
+                  top5C1.append(top5C1[3])
+                  top5C2[3]=top5C2[2]
+                  top5C1[3]=top5C1[2]
+                  top5C2[2]=top5C2[1]
+                  top5C1[2]=top5C1[1]
+                  top5C2[1]=top5C2[0]
+                  top5C1[1]=top5C1[0]
+                  top5C2[0]=precioi
+                  top5C1[0]= i
+                else:
+                  top5C2.append(top5C2[3])
+                  top5C1.append(top5C1[3])
+                  top5C2[3]=top5C2[2]
+                  top5C1[3]=top5C1[2]
+                  top5C2[2]=top5C2[1]
+                  top5C1[2]=top5C1[1]
+                  top5C2[1]=precioi
+                  top5C1[1]=i
+              else:
+                top5C2.append(top5C2[3])
+                top5C1.append(top5C1[3])
+                top5C2[3]=top5C2[2]
+                top5C1[3]=top5C1[2]
+                top5C2[2]=precioi
+                top5C1[2]=i
+            else:
+              top5C2.append(top5C2[3])
+              top5C1.append(top5C1[3])
+              top5C2[3]=precioi
+              top5C1[3]=i
+          else:
+            top5C2.append(precioi)
+            top5C1.append(i)
+        if top5C1.size()==3:
+          if top5C2[2]<precioi:
+            if top5C2[1]<precioi:
+              if top5C2[0]<precioi:
+                top5C2.append(top5C2[2])
+                top5C1.append(top5C1[2])
+                top5C2[2]=top5C2[1]
+                top5C1[2]=top5C1[1]
+                top5C2[1]=top5C2[0]
+                top5C1[1]=top5C1[0]
+                top5C2[0]=precioi
+                top5C1[0]= i
+              else:
+                top5C2.append(top5C2[2])
+                top5C1.append(top5C1[2])
+                top5C2[2]=top5C2[1]
+                top5C1[2]=top5C1[1]
+                top5C2[1]=precioi
+                top5C1[1]=i
+            else:
+              top5C2.append(top5C2[2])
+              top5C1.append(top5C1[2])
+              top5C2[2]=precioi
+              top5C1[2]=i
+          else:
+            top5C2.append(precioi)
+            top5C1.append(i)
+        if top5C1.size()==2:
+          if top5C2[1]<precioi:
+            if top5C2[0]<precioi:
+              top5C2.append(top5C2[1])
+              top5C1.append(top5C1[1])
+              top5C2[1]=top5C2[0]
+              top5C1[1]=top5C1[0]
+              top5C2[0]=precioi
+              top5C1[0]= i
+            else:
+              top5C2.append(top5C2[1])
+              top5C1.append(top5C1[1])
+              top5C2[1]=precioi
+              top5C1[1]=i
+          else:
+            top5C2.append(precioi)
+            top5C1.append(i)
+        if top5C1.size()==1:
+          if top5C2[0]<precioi:
+            top5C2.append(top5C2[0])
+            top5C1.append(top5C1[0])
+            top5C2[0]=precioi
+            top5C1[0] = i
+          else:
+            top5C2.append(precioi)
+            top5C1.append(i)
+        if top5C1.size() == 0:
+          top5C2.append(precioi)
+          top5C1.append(i)
+  j+=1
+  return list.size(), total, pesot, top5A1, top5A2, top5C1, top5C2
+
 
 def req6(catalog,yi,yf,n):
     count = 0
@@ -482,7 +723,7 @@ def req6(catalog,yi,yf,n):
     if repeated == 0: # NONE TIE
         best = lt.lastElement(lst) # O(1)
         artworks = helperREQ6(catalog,best) # O(1) IN GENERAL, BECAUSE n ISN'T TOO BIG
-        quicksorting(lst,cmp)
+        mergesorting(lst,cmp)
         return lst,best,artworks
     # ____ELSE____ #
     # ========================= CRITERIA 2 ========================= #
@@ -501,13 +742,13 @@ def req6(catalog,yi,yf,n):
     if repeated == 0: # NO TIE
         artworks = helperREQ6(catalog,best) # O(1) IN GENERAL, BECAUSE n ISN'T TOO BIG
         cmp = cmpMediumNumber
-        quicksorting(lst,cmp)
+        mergesorting(lst,cmp)
         return lst,best,artworks
     # ____ELSE____ #
     # ========================= CRITERIA 3 ========================= #
     best = lt.lastElement(lst) # O(1)
     artworks = helperREQ6(catalog,best) # O(1) IN GENERAL, BECAUSE n ISN'T TOO BIG
-    quicksorting(lst,cmp)
+    mergesorting(lst,cmp)
     return lst,best,artworks
 
 def helperREQ6(catalog,best):
@@ -602,14 +843,16 @@ def cmpMediumNumber(numberI,numberJ):
         return 0
     return False
 
-# Funciones de ordenamiento
+def cmpNationality(nationI,nationJ):
+    ci = nationI['count']
+    cj = nationJ['count']
+    if ci > cj:
+        return True
+    elif ci == cj:
+        return 0
+    return False
 
-def insertionsorting(lst, cmp):
-    start_time = time.process_time()
-    sortedL = insertion.sort(lst,cmp)
-    stop_time = time.process_time()
-    elapsed_time_mseg = (stop_time - start_time)*1000
-    return (sortedL, f'time: {elapsed_time_mseg}')
+# Funciones de ordenamiento
 
 def mergesorting(lst, cmp):
     start_time = time.process_time()
@@ -624,15 +867,6 @@ def quicksorting(lst, cmp):
     stop_time = time.process_time()
     elapsed_time_mseg = (stop_time - start_time)*1000
     return (sortedL, f'time: {elapsed_time_mseg}')
-    
-def shellsorting(lst, cmp):
-    start_time = time.process_time()
-    sortedL = shell.sort(lst, cmp)
-    stop_time = time.process_time()
-    elapsed_time_mseg = (stop_time - start_time)*1000
-    return (sortedL, f'time: {elapsed_time_mseg}')
-
-
 
 """
 def test_one(catalog):

@@ -44,30 +44,27 @@ def loaddata(catalog):
     #model.test_one(catalog)
 
 def loadartists(catalog):
-    artistsfile = cf.data_dir + 'MoMA/Artists-utf8-small.csv'
+    artistsfile = cf.data_dir + 'MoMA/Artists-utf8-20pct.csv'
     artistsFile = csv.DictReader(open(artistsfile, encoding='utf-8'))
     for artist in artistsFile:
         model.addArtist(catalog,artist)
     
 def loadartworks(catalog):
-    artworksfile = cf.data_dir + 'MoMA/Artworks-utf8-small.csv'
+    artworksfile = cf.data_dir + 'MoMA/Artworks-utf8-20pct.csv'
     artworksFile = csv.DictReader(open(artworksfile, encoding='utf-8'))
     for artwork in artworksFile:
         model.addArtwork(catalog,artwork)
 
 # Funciones de consulta sobre el catálogo
 
-def lab5(catalog,medium,n):
-    return model.lab5(catalog,medium,n)
-
-def lab6(catalog,nation):
-    return model.lab6(catalog,nation)
-
 def req1(catalog,yi,yf):
-  return model.req1(catalog,yi,yf)
+    return model.req1(catalog,yi,yf)
 
 def req3(catalog,artist):
     return model.req3(catalog,artist)
 
 def req6(catalog,yi,yf,n):
     return model.req6(catalog,yi,yf,n)
+
+def req5(catalog,d):
+    return model.req5(catalog,d)
